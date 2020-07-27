@@ -17,17 +17,23 @@
 # gifs from https://ezgif.com/
 
 from __future__ import print_function
+from __future__ import division
 
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from past.utils import old_div
+from builtins import object
 import copy
 import logging
 import multiprocessing
 import re
 import subprocess
-import Tkinter as tk
-import ttk
+import tkinter as tk
+import tkinter.ttk
 
 from multiprocessing import Queue
-from Queue import Empty
+from queue import Empty
 from PIL import ImageTk, Image
 from pkg_resources import resource_filename
 
@@ -75,7 +81,7 @@ def reorganise_subtests(tests_infos):
     # expected subtest id template
     regex = r"test-(?P<sc_id>\d+)-(?P<test_id>\d+)-\d+$"
 
-    for st_id, st_data in tests_infos.items():
+    for st_id, st_data in list(tests_infos.items()):
         match = re.match(regex, st_id)
         if match is None:
             logger.error("unexpected id format: %s"%st_id)
@@ -102,7 +108,7 @@ def value_from_subtest(key, test_infos, scenario_id, test_id,
     Use fallback value if it is not available.
     """
     if subtest_id is None:
-        value = getattr(test_infos[scenario_id][test_id].values()[0], key, fallback)
+        value = getattr(list(test_infos[scenario_id][test_id].values())[0], key, fallback)
     else:
         value = getattr(test_infos[scenario_id][test_id][subtest_id], key, fallback)
     return value
@@ -112,7 +118,7 @@ def file_order_sort(subtest_id):
     text, sc_id, tt_id, st_id = subtest_id.split("-")
     return (int(sc_id), int(tt_id), int(st_id))
 
-class GUIGenerator:
+class GUIGenerator(object):
     def __init__(self, master,
         suite, configs, naming,
         update_queue, request_queue,
@@ -476,7 +482,7 @@ class GUIGenerator:
         self.master.after(50, self.update_status)
 
 
-class PopUp:
+class PopUp(object):
     """A generic pop-up window"""
 
     def __init__(self, root, gui, title, message, width=None, height=None, centered=True):
@@ -524,7 +530,7 @@ class PopUp:
             root_y = self.root.winfo_rooty()
             root_h = self.root.winfo_height()
             root_w = self.root.winfo_width()
-            position = "+%d+%d" % (root_x + root_w/2 - top_x/2, root_y + root_h/3)
+            position = "+%d+%d" % (root_x + old_div(root_w,2) - old_div(top_x,2), root_y + old_div(root_h,3))
             self.top.geometry(position)
         # msg.config(wraplength=top_x*0.9)
 
@@ -538,7 +544,7 @@ class PopUp:
     def show_statuses(self):
         """Displays the different substests status"""
         status_count={}
-        for subtest in self.gui.subtests_ref.values():
+        for subtest in list(self.gui.subtests_ref.values()):
             status = subtest.status_icon.status
             if status in status_count:
                 status_count[status] += 1
@@ -621,7 +627,7 @@ class EndTestsPopUp(PopUp):
         self.gui.master.destroy()
 
 
-class QueueDebug:
+class QueueDebug(object):
 
     def __init__(self):
         top = tk.Toplevel()

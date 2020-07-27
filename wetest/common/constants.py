@@ -12,6 +12,7 @@
 # _NO_ RESPONSIBILITY FOR ANY CONSEQUENCE RESULTING FROM THE USE, MODIFICATION,
 # OR REDISTRIBUTION OF THIS SOFTWARE.
 
+from builtins import str
 import logging
 from logging.handlers import RotatingFileHandler
 import colorlog

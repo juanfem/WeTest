@@ -16,6 +16,8 @@
 
 from __future__ import print_function
 
+from builtins import str
+from builtins import object
 import logging
 
 import datetime
@@ -241,7 +243,7 @@ class ReportGenerator(object):
 
         # work out column width
         sec_max_length = [1]
-        for pv in self.pvs_infos.values():
+        for pv in list(self.pvs_infos.values()):
             try:
                 new_sec_length = [len(x) for x in self.naming.split(pv.name)[:-1]]
             except NamingError:

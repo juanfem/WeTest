@@ -13,11 +13,16 @@
 # OR REDISTRIBUTION OF THIS SOFTWARE.
 
 """Read tests in YAML file."""
+from __future__ import print_function
 
 # TODO command option to choose to stop if the scenario or the facultative
 # check are not validated (aka safe run)
 # TODO margin should only be used with numbers
 
+from builtins import input
+from builtins import str
+from builtins import range
+from builtins import object
 import logging
 import os
 import pkg_resources
@@ -151,8 +156,8 @@ def query_yes_no(question, default=None):
         raise ValueError("invalid default answer: '%s'" % default)
 
     while True:
-        print question + prompt
-        choice = raw_input().lower()
+        print(question + prompt)
+        choice = input().lower()
         if default is not None and choice == '':
             return valid[default]
         elif choice in valid:
@@ -161,7 +166,7 @@ def query_yes_no(question, default=None):
             print("Please respond with 'yes' or 'no' (or 'y' or 'n').\n")
 
 
-class MacrosManager():
+class MacrosManager(object):
     """A class to keep track of known, used and unknown variable.
 
     You should use the same manager if you want to keep updating the same
@@ -214,7 +219,7 @@ class MacrosManager():
             for x in new_macros:
                 self.add_new_macros(x, priority_to_known)
         elif isinstance(new_macros, dict):
-            for k, v in new_macros.items():
+            for k, v in list(new_macros.items()):
                 if str(k) in self.known_macros and priority_to_known:
                     pass
                 else:
@@ -238,7 +243,7 @@ class MacrosManager():
             return output
         elif isinstance(a_value, dict):
             output = dict()
-            for k, v in a_value.items():
+            for k, v in list(a_value.items()):
                 output[k] = self.substitue_macros(v, trace_unknown=trace_unknown)
             return output
 
@@ -420,7 +425,7 @@ class ScenarioReader(object):
             wetest_file["config"].setdefault("retry",  0)
 
         # transform local tests into something similar to an imported scenario
-        local_tests = {block:content for block,content in wetest_file.items() if block in ["config", "tests"]}
+        local_tests = {block:content for block,content in list(wetest_file.items()) if block in ["config", "tests"]}
 
         # Read each scenario listed in wetest_file and add them to `scenarios` block
         logger.info('Reading scenario file(s)...')
@@ -664,12 +669,12 @@ class ScenarioReader(object):
                             %(test["name"],cmd["name"]))
 
         # all macros should have been used at least once
-        for k, v in self.macros_mgr.known_macros.items():
+        for k, v in list(self.macros_mgr.known_macros.items()):
             if k not in self.macros_mgr.used_macros and k not in self.suite_macros:
                 errors.append("""Unused macro "%s": %s"""% (k,v))
 
         # all macros should have been replaced
-        for k,v in self.macros_mgr.unknown_macros.items():
+        for k,v in list(self.macros_mgr.unknown_macros.items()):
             errors.append("""Unknown macro "%s" (%d occurence%s)"""% (k,v,"" if v == 1 else "s"))
 
         return errors
@@ -756,7 +761,7 @@ class ScenarioReader(object):
             self.macros_mgr.add_new_macros(deserialized["macros"])
 
         deserialized = self.macros_mgr.substitue_macros(
-                {k: v for k,v in deserialized.items() if k != "macros"}
+                {k: v for k,v in list(deserialized.items()) if k != "macros"}
                 )
 
         self.macros_mgr.raise_errors()

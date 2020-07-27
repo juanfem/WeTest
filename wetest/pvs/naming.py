@@ -12,6 +12,8 @@
 # _NO_ RESPONSIBILITY FOR ANY CONSEQUENCE RESULTING FROM THE USE, MODIFICATION,
 # OR REDISTRIBUTION OF THIS SOFTWARE.
 
+from builtins import str
+from builtins import object
 import logging
 
 from wetest.common.constants import TERSE_FORMATTER, FILE_HANDLER, WeTestError
@@ -54,7 +56,7 @@ def generate_naming(identifier):
         raise NotImplementedError
 
 
-class Naming():
+class Naming(object):
 
     def __init__(self, name="Abstract Naming"):
         self.name=name
