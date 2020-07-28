@@ -19,7 +19,7 @@
 # - http://www.tcl.tk/man/tcl8.5/TkCmd/colors.htm
 # - https://www.color-blindness.com/color-name-hue/
 
-from __future__ import print_function
+from __future__ import print_function, division
 
 from future import standard_library
 standard_library.install_aliases()
@@ -424,7 +424,10 @@ class InfosStatusFrame(tk.Frame, object):
         self.duration_tooltip = Tooltip(self.duration_label, text=self.prev_duration_str)
 
         # configure and collapsable frame
-        frame_bg = self.cget("bg")
+        r, g, b = self.winfo_rgb(self.cget('bg'))
+        frame_bg = "#%02x%02x%02x" % (r//256, g//256, b//256)
+
+        # self.
         self.sub_frame_bg = "#"+hex(
             min(
                 int("0xffffff",16),
