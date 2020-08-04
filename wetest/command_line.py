@@ -26,8 +26,8 @@ It also enables to monitor PVs (extracted from the tests and from specified DB).
 import logging
 
 import argparse
-import multiprocessing
-from multiprocessing import Queue
+import threading
+from queue import Queue
 import os
 import pkg_resources
 import re
@@ -78,17 +78,12 @@ stream_handler.setFormatter(TERSE_FORMATTER)
 logger.addHandler(stream_handler)
 logger.addHandler(FILE_HANDLER)
 ## choose modules logging level
-# print("\n".join(logging.Logger.manager.loggerDict))  # list loggers
 logging.getLogger("wetest.gui.generator").setLevel(logging.ERROR)
 logging.getLogger("wetest.gui.specific").setLevel(logging.ERROR)
 logging.getLogger("wetest.gui.base").setLevel(logging.ERROR)
 logging.getLogger("wetest.report.generator").setLevel(logging.ERROR)
 logging.getLogger("wetest.testing.generator").setLevel(logging.ERROR)
 logging.getLogger("wetest.testing.reader").setLevel(logging.WARNING)
-## and for multiprocessing
-mp_logger = multiprocessing.get_logger()
-mp_logger.setLevel(multiprocessing.SUBWARNING)
-mp_logger.addHandler(stream_handler)
 
 # Global constants
 PREFIX = ""
@@ -122,7 +117,7 @@ class MultithreadedQueueStream(object):
     """
 
     def __init__(self):
-        self.queue = multiprocessing.Queue()
+        self.queue = Queue()
 
     def put(self, data):
         self.queue.put(data)
@@ -339,8 +334,8 @@ def main():
             logger.error(e)
             exit(4)
 
-    queue_to_gui = multiprocessing.Manager().Queue()
-    queue_from_gui = multiprocessing.Manager().Queue()
+    queue_to_gui = Queue()
+    queue_from_gui = Queue()
 
     # stop here if no PVs to monitor and no test to run
     if len(pvs_from_files) == 0 and suite.countTestCases() == 0:
@@ -449,7 +444,7 @@ class ProcessManager(object):
         self.naming = args["naming"]
 
         # trace start request  (to unpause run process)
-        self.evt_start = multiprocessing.Event()
+        self.evt_start = threading.Event()
         # stdin to subprocesses, for raw input use
         # https://stackoverflow.com/questions/13786974/raw-input-and-multiprocessing-in-python
         self.stdin = os.fdopen(os.dup(sys.stdin.fileno()))
@@ -466,48 +461,47 @@ class ProcessManager(object):
         self.p_gui_commands = None
 
         # process status
-        self.p_run_and_report_started = multiprocessing.Event()
-        self.p_parse_output_started = multiprocessing.Event()
-        self.p_gui_commands_started = multiprocessing.Event()
+        self.p_run_and_report_started = threading.Event()
+        self.p_parse_output_started = threading.Event()
+        self.p_gui_commands_started = threading.Event()
 
         # process data sharing
-        self.ns = multiprocessing.Manager().Namespace()
-        self.ns.no_gui = no_gui
+        self.no_gui = no_gui
         ## applaying test selection to suite needs to be done in runner process
-        self.selection_from_GUI = multiprocessing.Event()
-        self.ns.selection = ()  # use an imutable type to ensure namespace update
+        self.selection_from_GUI = threading.Event()
+        self.selection = ()  # use an imutable type to ensure namespace update
         ## store process pids for use by other processes
-        self.ns.pid_run_and_report = None
-        self.ns.pid_p_parse_output = None
-        self.ns.pid_p_gui_commands = None
+        # self.pid_run_and_report = None
+        # self.pid_p_parse_output = None
+        # self.pid_p_gui_commands = None
 
         # results fill by test runner, used by report generator
         self.results = None
 
     def start_runner_process(self):
         """start runner in another process (also needs to be CA compatible)"""
-        self.p_run_and_report = epics.CAProcess(
+        self.p_run_and_report = threading.Thread(
             target=self.run_and_report, name="run_and_report")
         self.p_run_and_report.start()
-        self.ns.pid_run_and_report = self.p_run_and_report.pid
-        logger.debug("pid_run_and_report: %s", self.ns.pid_run_and_report)
+        # self.pid_run_and_report = self.p_run_and_report.pid
+        # logger.debug("pid_run_and_report: %s", self.ns.pid_run_and_report)
         self.p_run_and_report_started.wait() # to be able to abort from p_parse_output
 
     def start_parser_process(self):
         """start parse_output in another process"""
-        self.p_parse_output = multiprocessing.Process(target=self.parse_output, name="parse_output")
+        self.p_parse_output =threading.Thread(target=self.parse_output, name="parse_output")
         self.p_parse_output.start()
-        self.ns.pid_p_parse_output = self.p_parse_output.pid
-        logger.debug("pid_p_parse_output: %s", self.ns.pid_p_parse_output)
+        # self.pid_p_parse_output = self.p_parse_output.pid
+        # logger.debug("pid_p_parse_output: %s", self.ns.pid_p_parse_output)
         self.p_parse_output_started.wait() # to be able to abort properly from p_gui_commands
 
     def start_gui_command_process(self):
         """sstart gui_commands in another process"""
-        self.p_gui_commands = multiprocessing.Process(target=self.gui_commands, name="gui_commands")
+        self.p_gui_commands = threading.Thread(target=self.gui_commands, name="gui_commands")
         # self.p_gui_commands.daemon = True # so that it can restart the runner and parser process
         self.p_gui_commands.start()
-        self.ns.pid_p_gui_commands = self.p_gui_commands.pid
-        logger.debug("pid_p_gui_commands: %s", self.ns.pid_p_gui_commands)
+        # self.pid_p_gui_commands = self.p_gui_commands.pid
+        # logger.debug("pid_p_gui_commands: %s", self.ns.pid_p_gui_commands)
         self.p_gui_commands_started.wait() # for homogeneity with other process start functions
 
     def run(self):
@@ -515,7 +509,7 @@ class ProcessManager(object):
         self.start_runner_process()
         self.start_parser_process()
 
-        if not self.ns.no_gui:
+        if not self.no_gui:
             self.start_gui_command_process()
 
     def join(self):
@@ -536,9 +530,9 @@ class ProcessManager(object):
     def run_and_report(self):
         """Runs the tests and generate the report"""
         self.p_run_and_report_started.set()
-        logger.debug("Enter run_and_report (%d)", multiprocessing.current_process().pid)
+        logger.debug("Enter run_and_report")
         logger.warning("-----------------------")
-        if self.ns.no_gui:
+        if self.no_gui:
             logger.warning("Ready to start testing.")
         else:
             logger.warning("Ready to start testing, use GUI play button.")
@@ -552,13 +546,13 @@ class ProcessManager(object):
             # update selection if necessary
             if self.selection_from_GUI.is_set():
                 logger.info("Applying test selection...")
-                selection = self.ns.selection
+                selection = self.selection
                 logger.debug("runner selected tests: %s", selection)
                 self.update_selection(selected = selection)
 
             logger.info("Running tests suite...")
 
-            runner = unittest.TextTestRunner(verbosity=0) # use verbosity for debug
+            self.runner = unittest.TextTestRunner(verbosity=0) # use verbosity for debug
 
             # check that there are tests to run
             logger.info("Nbr tests: %d", self.suite.countTestCases())
@@ -569,7 +563,7 @@ class ProcessManager(object):
                 self.results = []
             else:
                 logger.info("Running %d tests...", nbr_tests)
-                self.results = runner.run(self.suite)
+                self.results = self.runner.run(self.suite)
 
             logger.info("Ran tests suite.")
             self.runner_output.put(END_OF_TESTS)
@@ -589,11 +583,11 @@ class ProcessManager(object):
         # https://stackoverflow.com/questions/36359528/broken-pipe-error-with-multiprocessing-queue.
         # TODO is this solved now that Queue comes from a multiprocessing.Manager ?
 
-        logger.debug("Leave run_and_report (%d)", multiprocessing.current_process().pid)
+        logger.debug("Leave run_and_report")
 
     def pause_runner(self):
         self.queue_to_gui.put(PAUSE_FROM_MANAGER)
-        if self.ns.no_gui:
+        if self.no_gui:
             logger.warning("Pausing execution."
                 +"\n  - To continue press Ctrl+Z and enter `fg`."
                 +"\n  - To abort press Ctrl+C twice.")
@@ -601,8 +595,8 @@ class ProcessManager(object):
             logger.warning("Pausing execution."
                 +"\n  - To continue, use GUI play button, or press Ctrl+Z and enter `fg`."
                 +"\n  - To abort, use GUI abort button, or press Ctrl+C twice.")
-        os.kill(self.ns.pid_run_and_report, signal.SIGSTOP)
-        logger.debug("Paused run_and_report (%d)", self.ns.pid_run_and_report)
+        # os.kill(self.pid_run_and_report, signal.SIGSTOP)
+        logger.debug("Paused run_and_report")
 
     def start_play(self):
         """Call play runner after setting evt_start"""
@@ -616,32 +610,32 @@ class ProcessManager(object):
     def play_runner(self):
         self.queue_to_gui.put(PLAY_FROM_MANAGER)
         logger.info("Playing.")
-        os.kill(self.ns.pid_run_and_report, signal.SIGCONT)
-        logger.debug("Continue run_and_report (%d)", self.ns.pid_run_and_report)
+        # os.kill(self.ns.pid_run_and_report, signal.SIGCONT)
+        logger.debug("Continue run_and_report")
 
     def stop_runner(self):
         logger.warning("Aborting execution.")
         self.queue_to_gui.put(ABORT_FROM_MANAGER) # notify GUI
-        os.kill(self.ns.pid_run_and_report, signal.SIGKILL) # actually stop tests
-        logger.debug("Killed run_and_report (%d)", self.ns.pid_run_and_report)
+        # os.kill(self.ns.pid_run_and_report, signal.SIGKILL) # actually stop tests
+        logger.debug("Killed run_and_report")
 
     def stop_parser(self):
-        os.kill(self.ns.pid_p_parse_output, signal.SIGKILL)
-        logger.debug("Killed parse_output (%d)", self.ns.pid_p_parse_output)
+        # os.kill(self.ns.pid_p_parse_output, signal.SIGKILL)
+        logger.debug("Killed parse_output")
 
     @quiet_exception(KeyboardInterrupt)
     def gui_commands(self):
         """Process instructions from self.queue_from_gui"""
         self.p_gui_commands_started.set()
-        logger.debug("Enter gui_commands (%d)", multiprocessing.current_process().pid)
+        logger.debug("Enter gui_commands")
         while True:
             cmd = self.queue_from_gui.get()
             logger.debug("command from gui: %s" % cmd)
 
             if str(cmd).startswith(SELECTION_FROM_GUI):
                 # use an imutable type to ensure namespace update
-                self.ns.selection = tuple(cmd[len(SELECTION_FROM_GUI)+1:].split(" "))
-                logger.debug("gui commands selected tests: %s", self.ns.selection)
+                self.selection = tuple(cmd[len(SELECTION_FROM_GUI)+1:].split(" "))
+                # logger.debug("gui commands selected tests: %s", self.ns.selection)
                 self.selection_from_GUI.set()
 
             elif cmd == START_FROM_GUI:
@@ -658,7 +652,7 @@ class ProcessManager(object):
                 self.start_runner_process() # enable replay from GUI
 
             elif cmd == END_OF_GUI:
-                self.ns.no_gui = True
+                self.no_gui = True
                 self.stop_runner()
                 self.stop_parser()
                 break
@@ -666,7 +660,7 @@ class ProcessManager(object):
             else:
                 logger.critical("Unexpected gui command:\n%s" % cmd)
 
-        logger.debug("Leave gui_commands (%d)", multiprocessing.current_process().pid)
+        logger.debug("Leave gui_commands")
 
     def update_selection(self, selected):
         """Select only the test provided in selected, otherwise skip them."""
@@ -679,7 +673,7 @@ class ProcessManager(object):
         in a new thread
         """
         self.p_parse_output_started.set()
-        logger.debug("Enter parse_output (%d)", multiprocessing.current_process().pid)
+        logger.debug("Enter parse_output")
         while True:
 
             # get next output to parse
@@ -762,7 +756,7 @@ class ProcessManager(object):
             elif new_str == ABORT_FROM_TEST:
                 logger.debug("=> Abort from test")
                 self.stop_runner()
-                if self.ns.no_gui:
+                if self.no_gui:
                     break
                 else:
                     self.start_runner_process() # enable replay from GUI
@@ -771,7 +765,7 @@ class ProcessManager(object):
             elif new_str == END_OF_TESTS:
                 logger.debug("=> No more test to run.")
                 self.queue_to_gui.put(END_OF_TESTS)
-                if self.ns.no_gui:
+                if self.no_gui:
                     break
                 else:
                     self.start_runner_process() # enable replay from GUI
@@ -780,7 +774,7 @@ class ProcessManager(object):
             else:
                 logger.critical("Unexpected test output:\n%s" % new_str)
 
-        logger.debug("Leave parse_output (%d)", multiprocessing.current_process().pid)
+        logger.debug("Leave parse_output")
 
 if __name__ == "__main__":
     main()

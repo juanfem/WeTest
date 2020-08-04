@@ -26,7 +26,7 @@ from past.utils import old_div
 from builtins import object
 import copy
 import logging
-import multiprocessing
+from queue import Queue
 import re
 import subprocess
 import tkinter as tk
@@ -34,7 +34,6 @@ import tkinter.ttk
 from sys import platform
 import os
 
-from multiprocessing import Queue
 from queue import Empty
 from PIL import ImageTk, Image
 from pkg_resources import resource_filename
@@ -679,8 +678,8 @@ if __name__== "__main__":  # tests
         master=root,
         suite=suite,
         configs=["suite title", {'name': "scenario 1 title"}, {'name': "scenario 2 title"}],
-        update_queue=multiprocessing.Queue(),
-        request_queue=multiprocessing.Queue(),
+        update_queue=Queue(),
+        request_queue=Queue(),
         file_validation= ["warning text"]*5
         )
     root.mainloop()
