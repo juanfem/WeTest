@@ -21,7 +21,7 @@ except ImportError: # for pip <= 9.0.3
 # https://stackoverflow.com/questions/14399534/reference-requirements-txt-for-the-install-requires-kwarg-in-setuptools-setup-py
 # TODO: Find a better way to handle this (can stop working at any moment)
 install_reqs = parse_requirements('requirements.txt', session='hack')
-reqs = [str(ir.req) for ir in install_reqs]
+reqs = [str(ir.requirement) for ir in install_reqs]
 
 
 def readme():
