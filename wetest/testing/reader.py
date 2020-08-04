@@ -20,7 +20,6 @@ from __future__ import print_function
 # TODO margin should only be used with numbers
 
 from builtins import input
-from builtins import str
 from builtins import range
 from builtins import object
 import logging
@@ -425,14 +424,13 @@ class ScenarioReader(object):
             wetest_file["config"].setdefault("retry",  0)
 
         # transform local tests into something similar to an imported scenario
-        local_tests = {block:content for block,content in list(wetest_file.items()) if block in ["config", "tests"]}
+        local_tests = {block:content for block,content in wetest_file.items() if block in ["config", "tests"]}
 
         # Read each scenario listed in wetest_file and add them to `scenarios` block
         logger.info('Reading scenario file(s)...')
         self.deserialized_scenarios = []
 
         for scenario in wetest_file['include']:
-
             if self.propagate:
                 sc_macros_mgr = self.macros_mgr.deep_copy()
             else:
