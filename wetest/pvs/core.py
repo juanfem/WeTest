@@ -12,6 +12,10 @@
 # _NO_ RESPONSIBILITY FOR ANY CONSEQUENCE RESULTING FROM THE USE, MODIFICATION,
 # OR REDISTRIBUTION OF THIS SOFTWARE.
 
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from builtins import object
 import logging
 import time
 
@@ -28,7 +32,7 @@ stream_handler.setFormatter(TERSE_FORMATTER)
 logger.addHandler(stream_handler)
 logger.addHandler(FILE_HANDLER)
 
-class PVData():
+class PVData(object):
     """A class pikelable class to store PV connection status
     as well as trace all the subtests associated
 
@@ -174,7 +178,7 @@ class PVInfo(object):
 
         if len(obsolete) >= 0:
             self.data.tests_titles = {
-                k:v for k,v in self.data.tests_titles.items() if k not in obsolete
+                k:v for k,v in list(self.data.tests_titles.items()) if k not in obsolete
                 }
 
     def __str__(self):
@@ -192,7 +196,7 @@ def pvs_from_suite(suite, ref_dict=None, connection_callback=None):
     else:
         pvs_refs = ref_dict
 
-    for test_data in suite.tests_infos.values():
+    for test_data in list(suite.tests_infos.values()):
 
         if test_data.setter is not None:
             if test_data.setter in pvs_refs:
@@ -218,8 +222,8 @@ class PVsTable(object):
 
     def __init__(self, queue=None):
         if queue is None:
-            import Queue
-            self.queue = Queue.Queue()
+            import queue
+            self.queue = queue.Queue()
         else:
             self.queue = queue
         self.pvs_refs = {}
@@ -245,7 +249,7 @@ class PVsTable(object):
         # send PV status to GUI at least once per PV
         time.sleep(1) # give some time to PV connection to settle
 
-        for pv in self.pvs_refs.values():
+        for pv in list(self.pvs_refs.values()):
         # make sure that unreachable PV are displayed in stdout at least once
             if not pv.check_connection():
                 all_connected = False

@@ -14,6 +14,9 @@
 
 """Generates tests from YAML file."""
 
+from builtins import str
+from builtins import range
+from builtins import object
 import logging
 import numpy
 import random

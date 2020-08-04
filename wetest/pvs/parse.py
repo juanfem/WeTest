@@ -14,6 +14,7 @@
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+from builtins import str
 import argparse
 import os
 import logging
@@ -131,7 +132,7 @@ def dir2files(dirpath, prefix="", suffix=""):
 
 def prettyDict(input_dict, indent=0, print_function=print):
     """Prints a directory."""
-    for key, value in input_dict.items():
+    for key, value in list(input_dict.items()):
         print_function('\t' * indent + str(key)+' :\t' + str(value))
 
 
