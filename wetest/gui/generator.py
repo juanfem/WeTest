@@ -31,6 +31,8 @@ import re
 import subprocess
 import tkinter as tk
 import tkinter.ttk
+from sys import platform
+import os
 
 from multiprocessing import Queue
 from queue import Empty
@@ -147,7 +149,13 @@ class GUIGenerator(object):
             "report": [],
         }
 
-        self.report_software = "evince"
+        if platform == "darwin": 
+            self.report_software = lambda filename : subprocess.Popen(['open', filename])
+        elif platform == "win32":
+            self.report_software = lambda filename : os.startfile(filename)
+        elif platform == 'linux':
+            self.report_software = lambda filename : subprocess.Popen(['xdg-open', filename])
+
         self.report_path = None
 
         # set title and main window size
@@ -365,7 +373,7 @@ class GUIGenerator(object):
         logger.debug("REPORT !")
         logger.debug("report_software: %s", self.report_software)
         logger.debug("report_path: %s", self.report_path)
-        subprocess.Popen([self.report_software, self.report_path])
+        self.report_software(self.report_path)
 
     def quit(self):
         logger.debug("QUIT !")
