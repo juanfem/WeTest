@@ -39,6 +39,7 @@ import time
 import colorlog
 import epics
 
+from wetest.testing.generator import PipedTextTestResult
 from wetest.common.constants import (
     SELECTION_FROM_GUI, START_FROM_GUI, RESUME_FROM_GUI, PAUSE_FROM_GUI, ABORT_FROM_GUI,
     END_OF_GUI, CONTINUE_FROM_TEST, PAUSE_FROM_TEST, ABORT_FROM_TEST, END_OF_TESTS,
@@ -276,13 +277,15 @@ def main():
             logger.error(e)
             exit(4)
 
-    queue_to_gui = Queue()
-    queue_from_gui = Queue()
 
     # stop here if no PVs to monitor and no test to run
     if len(pvs_from_files) == 0 and suite.countTestCases() == 0:
         logger.error("Please provide at least a test to run or PVs to monitor.")
         sys.exit(3)
+
+    queue_to_gui = Queue()
+    queue_from_gui = Queue()
+    PipedTextTestResult.queue_to_gui = queue_to_gui
 
     # monitor PVs
     if args.no_pv:
@@ -366,7 +369,7 @@ def main():
 
         pm.join()
     except (KeyboardInterrupt, SystemExit):
-        pm.terminate()
+        # pm.terminate()
         logger.error("Aborting WeTest.")
     else:
         # clean ending

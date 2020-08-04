@@ -1,3 +1,4 @@
+import time
 import threading
 import unittest
 import os
@@ -5,6 +6,7 @@ import logging
 import re
 from queue import Queue
 
+from wetest.testing.generator import PipedTextTestResult
 from wetest.report.generator import ReportGenerator
 
 from wetest.common.constants import LVL_RUN_CONTROL
@@ -104,12 +106,12 @@ class ProcessManager(object):
 
         # process handles
         self.p_run_and_report = None
-        self.p_parse_output = None
+        # self.p_parse_output = None
         self.p_gui_commands = None
 
         # process status
         self.p_run_and_report_started = threading.Event()
-        self.p_parse_output_started = threading.Event()
+        # self.p_parse_output_started = threading.Event()
         self.p_gui_commands_started = threading.Event()
 
         # process data sharing
@@ -134,15 +136,15 @@ class ProcessManager(object):
         # logger.debug("pid_run_and_report: %s", self.ns.pid_run_and_report)
         self.p_run_and_report_started.wait()  # to be able to abort from p_parse_output
 
-    def start_parser_process(self):
-        """start parse_output in another process"""
-        self.p_parse_output = threading.Thread(
-            target=self.parse_output, name="parse_output")
-        self.p_parse_output.start()
-        # self.pid_p_parse_output = self.p_parse_output.pid
-        # logger.debug("pid_p_parse_output: %s", self.ns.pid_p_parse_output)
-        # to be able to abort properly from p_gui_commands
-        self.p_parse_output_started.wait()
+    # def start_parser_process(self):
+    #     """start parse_output in another process"""
+    #     self.p_parse_output = threading.Thread(
+    #         target=self.parse_output, name="parse_output")
+    #     self.p_parse_output.start()
+    #     # self.pid_p_parse_output = self.p_parse_output.pid
+    #     # logger.debug("pid_p_parse_output: %s", self.ns.pid_p_parse_output)
+    #     # to be able to abort properly from p_gui_commands
+    #     self.p_parse_output_started.wait()
 
     def start_gui_command_process(self):
         """sstart gui_commands in another process"""
@@ -158,7 +160,7 @@ class ProcessManager(object):
     def run(self):
         """Start the various subprocess"""
         self.start_runner_process()
-        self.start_parser_process()
+        # self.start_parser_process()
 
         if not self.no_gui:
             self.start_gui_command_process()
@@ -166,14 +168,14 @@ class ProcessManager(object):
     def join(self):
         """Joins on the multiple process running"""
         self.p_run_and_report.join()
-        self.p_parse_output.join()
+        # self.p_parse_output.join()
         if self.p_gui_commands is not None:
             self.p_gui_commands.join()
 
     def terminate(self):
         """Terminates the multiple process running"""
         self.p_run_and_report.terminate()
-        self.p_parse_output.terminate()
+        # self.p_parse_output.terminate()
         # if self.p_gui_commands is not None:
         #     self.p_gui_commands.terminate()
 
@@ -204,7 +206,7 @@ class ProcessManager(object):
             logger.info("Running tests suite...")
 
             self.runner = unittest.TextTestRunner(
-                verbosity=0)  # use verbosity for debug
+                resultclass=PipedTextTestResult, verbosity=0)  # use verbosity for debug
 
             # check that there are tests to run
             logger.info("Nbr tests: %d", self.suite.countTestCases())
@@ -218,7 +220,7 @@ class ProcessManager(object):
                 self.results = self.runner.run(self.suite)
 
             logger.info("Ran tests suite.")
-            self.runner_output.put(END_OF_TESTS)
+            self.queue_to_gui.put(END_OF_TESTS)
 
         logger.warning("Done running tests.")
 
@@ -272,9 +274,9 @@ class ProcessManager(object):
         # os.kill(self.ns.pid_run_and_report, signal.SIGKILL) # actually stop tests
         logger.debug("Killed run_and_report")
 
-    def stop_parser(self):
-        # os.kill(self.ns.pid_p_parse_output, signal.SIGKILL)
-        logger.debug("Killed parse_output")
+    # def stop_parser(self):
+    #     # os.kill(self.ns.pid_p_parse_output, signal.SIGKILL)
+    #     logger.debug("Killed parse_output")
 
     @quiet_exception(KeyboardInterrupt)
     def gui_commands(self):
@@ -308,7 +310,7 @@ class ProcessManager(object):
             elif cmd == END_OF_GUI:
                 self.no_gui = True
                 self.stop_runner()
-                self.stop_parser()
+                # self.stop_parser()
                 return
 
             else:

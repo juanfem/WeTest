@@ -95,7 +95,7 @@ class PVInfo(object):
 
         self.data = PVData(name)
 
-        self.pv = epics.PV(self.data.name, connection_timeout=0, connection_callback=connection_callback)
+        self.pv = epics.PV(self.data.name, connection_callback=connection_callback)
 
         setter_subtests = set([setter_subtests]) if setter_subtests is not None else set()
         getter_subtests = set([getter_subtests]) if getter_subtests is not None else set()
