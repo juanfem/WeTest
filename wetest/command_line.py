@@ -54,9 +54,9 @@ from wetest.gui.specific import (
     STATUS_ERROR, STATUS_FAIL, STATUS_SUCCESS
     )
 
-from wetest.pvs.core   import PVInfo, PVsTable
+from wetest.pvs.core import PVInfo, PVsTable
 from wetest.pvs.naming import generate_naming, NamingError
-from wetest.pvs.parse  import pvs_from_path
+from wetest.pvs.db_parser import pvs_from_path
 
 from wetest.testing.generator import TestsGenerator
 from wetest.testing.generator import SelectableTestCase, SelectableTestSuite
