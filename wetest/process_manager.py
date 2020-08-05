@@ -6,7 +6,7 @@ import logging
 import re
 from queue import Queue
 
-from wetest.testing.generator import PipedTextTestResult
+from wetest.testing.selectable_tests import SelectableTestResult
 from wetest.report.generator import ReportGenerator
 
 from wetest.common.constants import LVL_RUN_CONTROL
@@ -206,7 +206,7 @@ class ProcessManager(object):
             logger.info("Running tests suite...")
 
             self.runner = unittest.TextTestRunner(
-                resultclass=PipedTextTestResult, verbosity=0)  # use verbosity for debug
+                resultclass=SelectableTestResult, verbosity=0)  # use verbosity for debug
 
             # check that there are tests to run
             logger.info("Nbr tests: %d", self.suite.countTestCases())
@@ -234,7 +234,7 @@ class ProcessManager(object):
         else:
             logger.warning("No report to generate.")
 
-        time.sleep(0.1)  # Just enough to let the Queue finish
+        # time.sleep(0.1)  # Just enough to let the Queue finish
         # https://stackoverflow.com/questions/36359528/broken-pipe-error-with-multiprocessing-queue.
         # TODO is this solved now that Queue comes from a multiprocessing.Manager ?
 

@@ -39,7 +39,6 @@ import time
 import colorlog
 import epics
 
-from wetest.testing.generator import PipedTextTestResult
 from wetest.common.constants import (
     SELECTION_FROM_GUI, START_FROM_GUI, RESUME_FROM_GUI, PAUSE_FROM_GUI, ABORT_FROM_GUI,
     END_OF_GUI, CONTINUE_FROM_TEST, PAUSE_FROM_TEST, ABORT_FROM_TEST, END_OF_TESTS,
@@ -60,7 +59,7 @@ from wetest.pvs.naming import generate_naming, NamingError
 from wetest.pvs.db_parser import pvs_from_path
 
 from wetest.testing.generator import TestsGenerator
-from wetest.testing.generator import SelectableTestCase, SelectableTestSuite
+from wetest.testing.selectable_tests import SelectableTestCase, SelectableTestSuite, SelectableTestResult
 from wetest.testing.reader import (
     MacrosManager, ScenarioReader, FileNotFound, display_changlog
     )
@@ -285,7 +284,7 @@ def main():
 
     queue_to_gui = Queue()
     queue_from_gui = Queue()
-    PipedTextTestResult.queue_to_gui = queue_to_gui
+    SelectableTestResult.queue_to_gui = queue_to_gui
 
     # monitor PVs
     if args.no_pv:
