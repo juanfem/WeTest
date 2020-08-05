@@ -283,8 +283,11 @@ def main():
         sys.exit(3)
 
     queue_to_gui = Queue()
-    queue_from_gui = Queue()
+    queue_to_pm = Queue()
+    queue_to_runner = Queue()
     SelectableTestResult.queue_to_gui = queue_to_gui
+    SelectableTestResult.queue_to_pm = queue_to_pm
+    SelectableTestResult.queue_to_runner = queue_to_runner
 
     # monitor PVs
     if args.no_pv:
@@ -318,7 +321,7 @@ def main():
         logger.info("Opening GUI...")
         root = tk.Tk()
         gui = GUIGenerator(master=root, suite=suite, configs=configs, naming=naming,
-            update_queue=queue_to_gui, request_queue=queue_from_gui,
+            update_queue=queue_to_gui, pm_queue=queue_to_pm, runner_queue=queue_to_runner,
             file_validation=fv_list)
 
     if args.no_pdf_output:
@@ -335,7 +338,7 @@ def main():
         "naming": naming,
     }
 
-    pm = ProcessManager(data, not with_gui, queue_to_gui, queue_from_gui)
+    pm = ProcessManager(data, not with_gui, queue_to_gui, queue_to_pm, queue_to_runner)
     try:
 
         pm.run()
@@ -363,7 +366,7 @@ def main():
         if with_gui:
             root.mainloop()
             logger.warning("GUI closed.")
-            queue_from_gui.put(END_OF_GUI)
+            queue_to_pm.put(END_OF_GUI)
 
 
         pm.join()

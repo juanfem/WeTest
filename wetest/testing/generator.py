@@ -26,15 +26,22 @@ import unittest
 
 import epics
 
-from .selectable_tests import SelectableTestCase
+from .selectable_tests import SelectableTestCase, SelectableTestResult
 
 from wetest.common.constants import CONTINUE_FROM_TEST, PAUSE_FROM_TEST, ABORT_FROM_TEST
 from wetest.common.constants import LVL_TEST_ERRORED, LVL_TEST_FAILED, LVL_TEST_SKIPPED
 from wetest.common.constants import LVL_TEST_SUCCESS, LVL_TEST_RUNNING, LVL_RUN_CONTROL
 from wetest.common.constants import VERBOSE_FORMATTER, TERSE_FORMATTER, FILE_HANDLER
 from wetest.common.constants import WeTestError, to_string
+from wetest.common.constants import START_FROM_GUI, RESUME_FROM_GUI, PAUSE_FROM_GUI, ABORT_FROM_GUI
+
+from wetest.gui.specific import (
+    STATUS_UNKNOWN, STATUS_RUN, STATUS_RETRY, STATUS_SKIP,
+    STATUS_ERROR, STATUS_FAIL, STATUS_SUCCESS
+)
 
 from wetest.testing.reader import ABORT, PAUSE, CONTINUE
+
 
 NO_KIND = "Missing test kind (values, range or commands)"
 
@@ -480,31 +487,22 @@ def test_generator(test_data):
                 break  # no exception then no need for retry
 
             # test fails
-            except (AssertionError) as e:
+            except (AssertionError) as exception:
+                test_data.elapsed = time.time()-start_time
+                test_data.exception = exception
                 # loop again if they are retries left
                 if nb_exec <= test_data.retry:
-                    test_data.elapsed = time.time()-start_time
                     tr_logger.log(LVL_TEST_RUNNING, "Retry (%d/%s) %s    (in %.3fs) %s",
                                   nb_exec, test_data.retry, test_data.id, test_data.elapsed, e)
-                    test_data.exception = e
-
-                    if on_failure != CONTINUE:
-                        tr_logger.log(LVL_RUN_CONTROL, "%s", on_failure)
-                        # give time to pause or abort runner before retrying
-                        # time.sleep(0.1)
+                    SelectableTestResult.queue_to_gui.put(
+                        [test_data.id, STATUS_RETRY, test_data.elapsed, test_data.exception])
 
                     continue
 
                 # otherwise mark as failed
-                test_data.elapsed = time.time()-start_time
                 tr_logger.log(LVL_TEST_FAILED, "Failure of %s    (in %.3fs) %s",
-                              test_data.id, test_data.elapsed, e)
-                test_data.exception = e
+                              test_data.id, test_data.elapsed, test_data.exception)
                 tr_logger.log(LVL_RUN_CONTROL, "%s", on_failure)
-                # if on_failure != CONTINUE:
-                    
-                    # give time to pause or abort runner before running next test
-                    # time.sleep(0.1)
 
                 raise
 
@@ -515,9 +513,7 @@ def test_generator(test_data):
                 tr_logger.log(LVL_TEST_ERRORED, "Error   of %s    (in %.3fs) %s%s%s", test_data.id, test_data.elapsed,
                               "[setter error] "*setter_error, "[getter error] "*getter_error, e)
                 tr_logger.log(LVL_RUN_CONTROL, "%s", on_failure)
-                # if on_failure != CONTINUE:
-                    # give time to pause or abort runner before running next test
-                    # time.sleep(0.1)
+
                 raise
 
     return test, test_data

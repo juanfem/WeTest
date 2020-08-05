@@ -83,9 +83,10 @@ class MultithreadedQueueStream(object):
 class ProcessManager(object):
     """Class that start/stop the runner and report process, and process their outputs."""
 
-    def __init__(self, args, no_gui, queue_to_gui, queue_from_gui):
+    def __init__(self, args, no_gui, queue_to_gui, queue_to_pm, queue_to_runner):
         self.queue_to_gui = queue_to_gui
-        self.queue_from_gui = queue_from_gui
+        self.queue_to_pm = queue_to_pm
+        self.queue_to_runner = queue_to_runner
 
         self.suite = args["suite"]
         self.pdf_output = args["pdf_output"]
@@ -267,12 +268,14 @@ class ProcessManager(object):
         logger.info("Playing.")
         # os.kill(self.ns.pid_run_and_report, signal.SIGCONT)
         logger.debug("Continue run_and_report")
+        self.queue_to_runner.put(RESUME_FROM_GUI)
 
     def stop_runner(self):
         logger.warning("Aborting execution.")
         self.queue_to_gui.put(ABORT_FROM_MANAGER)  # notify GUI
         # os.kill(self.ns.pid_run_and_report, signal.SIGKILL) # actually stop tests
         logger.debug("Killed run_and_report")
+        self.queue_to_runner.put(ABORT_FROM_GUI)
 
     # def stop_parser(self):
     #     # os.kill(self.ns.pid_p_parse_output, signal.SIGKILL)
@@ -284,7 +287,7 @@ class ProcessManager(object):
         self.p_gui_commands_started.set()
         logger.debug("Enter gui_commands")
         while True:
-            cmd = self.queue_from_gui.get()
+            cmd = self.queue_to_pm.get()
             logger.debug("command from gui: %s" % cmd)
 
             if str(cmd).startswith(SELECTION_FROM_GUI):
@@ -313,6 +316,32 @@ class ProcessManager(object):
                 # self.stop_parser()
                 return
 
+            # check for test requested continue
+            elif cmd == CONTINUE_FROM_TEST:
+                logger.debug("=> Continue from test")
+                pass
+
+            # check for test requested pause
+            elif cmd == PAUSE_FROM_TEST:
+                logger.debug("=> Pause from test")
+                self.pause_runner()
+
+            # check for test requested abort
+            elif cmd == ABORT_FROM_TEST:
+                logger.debug("=> Abort from test")
+                if self.no_gui:
+                    break
+                else:
+                    self.start_runner_process()  # enable replay from GUI
+
+            # check for no more tests
+            elif cmd == END_OF_TESTS:
+                logger.debug("=> No more test to run.")
+                self.queue_to_gui.put(END_OF_TESTS)
+                if self.no_gui:
+                    break
+                else:
+                    self.start_runner_process()  # enable replay from GUI
             else:
                 logger.critical("Unexpected gui command:\n%s" % cmd)
 

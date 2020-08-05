@@ -1,9 +1,15 @@
 import unittest
 
+from wetest.testing.reader import ABORT, PAUSE, CONTINUE
+
 from wetest.gui.specific import (
     STATUS_UNKNOWN, STATUS_RUN, STATUS_RETRY, STATUS_SKIP,
     STATUS_ERROR, STATUS_FAIL, STATUS_SUCCESS
 )
+
+from wetest.common.constants import CONTINUE_FROM_TEST, PAUSE_FROM_TEST, ABORT_FROM_TEST
+from wetest.common.constants import START_FROM_GUI, RESUME_FROM_GUI, PAUSE_FROM_GUI, ABORT_FROM_GUI
+
 
 class SelectableTestResult(unittest.TextTestResult):
     '''
@@ -15,37 +21,57 @@ class SelectableTestResult(unittest.TextTestResult):
         self.queue_to_gui.put([test._testMethodName, STATUS_RUN, None, None])
         super(SelectableTestResult, self).addSuccess(test)
         self.queue_to_gui.put([test._testMethodName, STATUS_SUCCESS,
-                          test.test_data[test._testMethodName].elapsed, test.test_data[test._testMethodName].exception])
+                               test.test_data[test._testMethodName].elapsed, test.test_data[test._testMethodName].exception])
 
     def addError(self, test, err):
         self.queue_to_gui.put([test._testMethodName, STATUS_RUN, None, None])
         super(SelectableTestResult, self).addError(test, err)
         self.queue_to_gui.put([test._testMethodName, STATUS_ERROR,
-                          test.test_data[test._testMethodName].elapsed, test.test_data[test._testMethodName].exception])
+                               test.test_data[test._testMethodName].elapsed, test.test_data[test._testMethodName].exception])
+        self.handler_errors(test)
 
     def addFailure(self, test, err):
         self.queue_to_gui.put([test._testMethodName, STATUS_RUN, None, None])
         super(SelectableTestResult, self).addFailure(test, err)
         self.queue_to_gui.put([test._testMethodName, STATUS_FAIL,
-                          test.test_data[test._testMethodName].elapsed, test.test_data[test._testMethodName].exception])
+                               test.test_data[test._testMethodName].elapsed, test.test_data[test._testMethodName].exception])
+        self.handler_errors(test)
+        
 
     def addSkip(self, test, reason):
         self.queue_to_gui.put([test._testMethodName, STATUS_RUN, None, None])
         super(SelectableTestResult, self).addSkip(test, reason)
         self.queue_to_gui.put([test._testMethodName, STATUS_SKIP,
-                          test.test_data[test._testMethodName].elapsed, test.test_data[test._testMethodName].exception])
+                               test.test_data[test._testMethodName].elapsed, test.test_data[test._testMethodName].exception])
 
     def addExpectedFailure(self, test, err):
         self.queue_to_gui.put([test._testMethodName, STATUS_RUN, None, None])
         super(SelectableTestResult, self).addExpectedFailure(test, err)
         self.queue_to_gui.put([test._testMethodName, STATUS_UNKNOWN,
-                          test.test_data[test._testMethodName].elapsed, test.test_data[test._testMethodName].exception])
+                               test.test_data[test._testMethodName].elapsed, test.test_data[test._testMethodName].exception])
+        self.handler_errors(test)
 
     def addUnexpectedSuccess(self, test):
         self.queue_to_gui.put([test._testMethodName, STATUS_RUN, None, None])
         super(SelectableTestResult, self).addUnexpectedSuccess(test)
         self.queue_to_gui.put([test._testMethodName, STATUS_UNKNOWN,
-                          test.test_data[test._testMethodName].elapsed, test.test_data[test._testMethodName].exception])
+                               test.test_data[test._testMethodName].elapsed, test.test_data[test._testMethodName].exception])
+        self.handler_errors(test)
+
+    def handler_errors(self, test):
+        if test.test_data[test._testMethodName].on_failure == PAUSE:
+            self.queue_to_runner.get_nowait()
+            self.queue_to_pm.put(PAUSE_FROM_TEST)
+            cmd = self.queue_to_runner.get()
+            if cmd == RESUME_FROM_GUI:
+                return
+            elif cmd == ABORT_FROM_GUI:
+                self.stop()
+                return
+        elif test.test_data[test._testMethodName].on_failure == ABORT:
+            self.queue_to_pm.put(ABORT_FROM_TEST)
+            self.stop()
+            return
 
 
 class SelectableTestCase(unittest.TestCase):
@@ -76,7 +102,7 @@ class SelectableTestCase(unittest.TestCase):
 class SelectableTestSuite(unittest.TestSuite):
     """A unittest.TestSuite with conveniency method to skip and unskip tests."""
 
-    _cleanup = False 
+    _cleanup = False
 
     def __init__(self, *args, **kargs):
         unittest.TestSuite.__init__(self, *args, **kargs)
