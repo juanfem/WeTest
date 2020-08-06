@@ -243,6 +243,7 @@ class ProcessManager(object):
 
     def pause_runner(self):
         self.queue_to_gui.put(PAUSE_FROM_MANAGER)
+        self.queue_to_runner.put(PAUSE_FROM_MANAGER)
         if self.no_gui:
             logger.warning("Pausing execution."
                            + "\n  - To continue press Ctrl+Z and enter `fg`."
@@ -265,17 +266,17 @@ class ProcessManager(object):
 
     def play_runner(self):
         self.queue_to_gui.put(PLAY_FROM_MANAGER)
+        self.queue_to_runner.put(PLAY_FROM_MANAGER)
         logger.info("Playing.")
         # os.kill(self.ns.pid_run_and_report, signal.SIGCONT)
         logger.debug("Continue run_and_report")
-        self.queue_to_runner.put(RESUME_FROM_GUI)
 
     def stop_runner(self):
         logger.warning("Aborting execution.")
         self.queue_to_gui.put(ABORT_FROM_MANAGER)  # notify GUI
+        self.queue_to_runner.put(ABORT_FROM_MANAGER)
         # os.kill(self.ns.pid_run_and_report, signal.SIGKILL) # actually stop tests
         logger.debug("Killed run_and_report")
-        self.queue_to_runner.put(ABORT_FROM_GUI)
 
     # def stop_parser(self):
     #     # os.kill(self.ns.pid_p_parse_output, signal.SIGKILL)
@@ -313,7 +314,6 @@ class ProcessManager(object):
             elif cmd == END_OF_GUI:
                 self.no_gui = True
                 self.stop_runner()
-                # self.stop_parser()
                 return
 
             # check for test requested continue
@@ -352,111 +352,3 @@ class ProcessManager(object):
         logger.warning("Applying selection may take some time.")
         self.suite.apply_selection(selected, "Skipped from GUI.")
 
-    @quiet_exception(KeyboardInterrupt)
-    def parse_output(self):
-        """reads runner output and convert it to update data items
-        in a new thread
-        """
-        self.p_parse_output_started.set()
-        logger.debug("Enter parse_output")
-        while True:
-
-            # get next output to parse
-            new_str = self.runner_output.get().rstrip("\n")
-            logger.debug("from tests runner:>%s<" % new_str)
-            # ignore empty lines
-            if new_str == "":
-                continue
-
-            # check for start of test
-            match_running = re.search(
-                r"^Running\s*(?P<test_id>test-\d+-\d+-\d+)\s*.*$",
-                new_str)
-            # check for skipped test
-            match_skipped = re.search(
-                r"^Skipping\s*(?P<test_id>test-\d+-\d+-\d+)\s*.*$",
-                new_str)
-            # check for retry of test
-            match_rerun = re.search(
-                r"^Retry \(.*\)\s*(?P<test_id>test-\d+-\d+-\d+)\s*\(in (?P<duration>\d+\.\d+)s\)\s*(?P<trace>.*)$",
-                new_str)
-            # check for end of test
-            match_result = re.match(
-                r"^(?P<status>Success\s*of|Failure\s*of|Error\s*of)\s*(?P<test_id>test-\d+-\d+-\d+)\s*\(in (?P<duration>\d+\.\d+)s\)\s*(?P<trace>[\s\S]*)$",
-                new_str)
-
-            if match_running is not None:
-                logger.debug("=> New test running")
-                logger.debug("test_id: %s", match_running.group("test_id"))
-                test_id = match_running.group("test_id")
-                self.queue_to_gui.put([test_id, STATUS_RUN, None, None])
-
-            elif match_skipped is not None:
-                logger.debug("=> Test skipped")
-                logger.debug("test_id: %s", match_skipped.group("test_id"))
-                test_id = match_skipped.group("test_id")
-                self.queue_to_gui.put([test_id, STATUS_SKIP, None, None])
-
-            elif match_rerun is not None:
-                logger.debug("=> Test retry")
-                test_id = match_rerun.group("test_id")
-                duration = match_rerun.group("duration")
-                trace = match_rerun.group("trace")
-                if trace == "":
-                    trace = None
-                self.queue_to_gui.put([test_id, STATUS_RETRY, duration, trace])
-
-            elif match_result is not None:
-                logger.debug("=> New test result")
-                status = match_result.group("status")
-                test_id = match_result.group("test_id")
-                duration = match_result.group("duration")
-                trace = match_result.group("trace")
-                if trace == "":
-                    trace = None
-                if status.startswith("Error "):
-                    status = STATUS_ERROR
-                elif status.startswith("Failure "):
-                    status = STATUS_FAIL
-                elif status.startswith("Success "):
-                    status = STATUS_SUCCESS
-                else:
-                    logger.error("Unexpected status "+status)
-                    status = STATUS_UNKNOWN
-
-                # finish running test
-                self.queue_to_gui.put([test_id, status, duration, trace])
-
-            # check for test requested continue
-            elif new_str == CONTINUE_FROM_TEST:
-                logger.debug("=> Continue from test")
-                pass
-
-            # check for test requested pause
-            elif new_str == PAUSE_FROM_TEST:
-                logger.debug("=> Pause from test")
-                self.pause_runner()
-
-            # check for test requested abort
-            elif new_str == ABORT_FROM_TEST:
-                logger.debug("=> Abort from test")
-                self.stop_runner()
-                if self.no_gui:
-                    break
-                else:
-                    self.start_runner_process()  # enable replay from GUI
-
-            # check for no more tests
-            elif new_str == END_OF_TESTS:
-                logger.debug("=> No more test to run.")
-                self.queue_to_gui.put(END_OF_TESTS)
-                if self.no_gui:
-                    break
-                else:
-                    self.start_runner_process()  # enable replay from GUI
-
-            # we should not reach here
-            else:
-                logger.critical("Unexpected test output:\n%s" % new_str)
-
-        logger.debug("Leave parse_output")

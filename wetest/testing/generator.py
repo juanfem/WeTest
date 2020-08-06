@@ -33,7 +33,7 @@ from wetest.common.constants import LVL_TEST_ERRORED, LVL_TEST_FAILED, LVL_TEST_
 from wetest.common.constants import LVL_TEST_SUCCESS, LVL_TEST_RUNNING, LVL_RUN_CONTROL
 from wetest.common.constants import VERBOSE_FORMATTER, TERSE_FORMATTER, FILE_HANDLER
 from wetest.common.constants import WeTestError, to_string
-from wetest.common.constants import START_FROM_GUI, RESUME_FROM_GUI, PAUSE_FROM_GUI, ABORT_FROM_GUI
+from wetest.common.constants import PLAY_FROM_MANAGER, PAUSE_FROM_MANAGER, ABORT_FROM_MANAGER
 
 from wetest.gui.specific import (
     STATUS_UNKNOWN, STATUS_RUN, STATUS_RETRY, STATUS_SKIP,
@@ -262,7 +262,7 @@ def test_generator(test_data):
         value of 10%, all values between 9V and 11V will be considered as good
         value.
 
-        """
+        """        
         if test_data.on_failure == CONTINUE:
             on_failure = CONTINUE_FROM_TEST
         elif test_data.on_failure == PAUSE:
@@ -515,6 +515,14 @@ def test_generator(test_data):
                 tr_logger.log(LVL_RUN_CONTROL, "%s", on_failure)
 
                 raise
+
+            finally:
+                if not SelectableTestResult.queue_to_runner.empty():
+                    cmd = SelectableTestResult.queue_to_runner.get_nowait()
+                    if cmd == PAUSE_FROM_MANAGER:
+                        cmd = SelectableTestResult.queue_to_runner.get()
+                    if cmd == ABORT_FROM_MANAGER:
+                        self._outcome.result.stop()
 
     return test, test_data
 

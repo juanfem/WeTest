@@ -8,7 +8,7 @@ from wetest.gui.specific import (
 )
 
 from wetest.common.constants import CONTINUE_FROM_TEST, PAUSE_FROM_TEST, ABORT_FROM_TEST
-from wetest.common.constants import START_FROM_GUI, RESUME_FROM_GUI, PAUSE_FROM_GUI, ABORT_FROM_GUI
+from wetest.common.constants import PLAY_FROM_MANAGER, PAUSE_FROM_MANAGER, ABORT_FROM_MANAGER
 
 
 class SelectableTestResult(unittest.TextTestResult):
@@ -16,6 +16,8 @@ class SelectableTestResult(unittest.TextTestResult):
     Extending TextTestResults to send 
     '''
     queue_to_gui = None
+    queue_to_runner = None
+    queue_to_pm = None
 
     def addSuccess(self, test):
         self.queue_to_gui.put([test._testMethodName, STATUS_RUN, None, None])
@@ -60,12 +62,15 @@ class SelectableTestResult(unittest.TextTestResult):
 
     def handler_errors(self, test):
         if test.test_data[test._testMethodName].on_failure == PAUSE:
-            self.queue_to_runner.get_nowait()
+            if not self.queue_to_runner.empty():
+                self.queue_to_runner.get_nowait()
             self.queue_to_pm.put(PAUSE_FROM_TEST)
             cmd = self.queue_to_runner.get()
-            if cmd == RESUME_FROM_GUI:
+            if cmd==PAUSE_FROM_MANAGER:
+                cmd = self.queue_to_runner.get()
+            if cmd == PLAY_FROM_MANAGER:
                 return
-            elif cmd == ABORT_FROM_GUI:
+            elif cmd == ABORT_FROM_MANAGER:
                 self.stop()
                 return
         elif test.test_data[test._testMethodName].on_failure == ABORT:

@@ -321,7 +321,7 @@ def main():
         logger.info("Opening GUI...")
         root = tk.Tk()
         gui = GUIGenerator(master=root, suite=suite, configs=configs, naming=naming,
-            update_queue=queue_to_gui, pm_queue=queue_to_pm, runner_queue=queue_to_runner,
+            update_queue=queue_to_gui, request_queue=queue_to_pm,
             file_validation=fv_list)
 
     if args.no_pdf_output:

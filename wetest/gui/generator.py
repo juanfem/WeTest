@@ -122,7 +122,7 @@ def file_order_sort(subtest_id):
 class GUIGenerator(object):
     def __init__(self, master,
         suite, configs, naming,
-        update_queue, pm_queue, runner_queue,
+        update_queue, request_queue,
         file_validation):
 
 
@@ -133,8 +133,7 @@ class GUIGenerator(object):
         self.naming = naming
         self.subtests_ref = dict()
         self.update_queue = update_queue
-        self.pm_queue = pm_queue
-        self.runner_queue = runner_queue
+        self.request_queue = request_queue
 
         self.current_test_id = None
         self.current_test_retrying = False
@@ -348,26 +347,26 @@ class GUIGenerator(object):
         self.disable("play")
         if not self.finished:
             logger.debug("RESUME !")
-            self.pm_queue.put(RESUME_FROM_GUI)
+            self.request_queue.put(RESUME_FROM_GUI)
         else:
             self.attach_key("play", self.button_gif["processing"])
             logger.debug("START !")
             selection = self.suite_gui.apply_selection()
-            self.pm_queue.put(SELECTION_FROM_GUI + " " + " ".join(selection[SELECTED]))
-            self.pm_queue.put(START_FROM_GUI)
+            self.request_queue.put(SELECTION_FROM_GUI + " " + " ".join(selection[SELECTED]))
+            self.request_queue.put(START_FROM_GUI)
 
     def pause(self):
         """Pause tests execution"""
         self.disable("pause")
         logger.debug("PAUSE !")
-        self.pm_queue.put(PAUSE_FROM_GUI)
+        self.request_queue.put(PAUSE_FROM_GUI)
 
     def abort(self):
         """Abort tests execution"""
         self.disable("pause")
         self.disable("stop")
         logger.debug("ABORT !")
-        self.pm_queue.put(ABORT_FROM_GUI)
+        self.request_queue.put(ABORT_FROM_GUI)
 
     def report(self):
         logger.debug("REPORT !")
@@ -415,11 +414,11 @@ class GUIGenerator(object):
                             self.subtests_ref[self.current_test_id].update_status(STATUS_P_RETRY, dynamic=True)
                         else:
                             self.subtests_ref[self.current_test_id].update_status(STATUS_PAUSE, dynamic=True)
-                    PausedPopUp(root=self.master, gui=self)
                     # update available controls
                     self.enable("play")
                     self.disable("pause")
                     self.enable("stop")
+                    PausedPopUp(root=self.master, gui=self)
 
                 elif update in [PLAY_FROM_MANAGER, PLAY_FROM_GUI]:
                     self.playing = True
@@ -434,6 +433,11 @@ class GUIGenerator(object):
                         else:
                             self.subtests_ref[self.current_test_id].update_status(STATUS_RUN, dynamic=True)
 
+                    self.disable("play")
+                    self.enable("pause")
+                    self.enable("stop")
+                    self.detach_key("play", self.button_gif["processing"], self.button_img["play"])
+
                 elif str(update).startswith(REPORT_GENERATED):
                     logger.warning("Report available.")
                     self.report_path = update[len(REPORT_GENERATED)+1:]
@@ -444,15 +448,6 @@ class GUIGenerator(object):
                     test_status = update[1]
                     test_duration = update[2]
                     test_trace = update[3]
-
-                    # check GUI knows tests are running (in case play was sent from CLI)
-                    if not self.playing:
-                        self.update_queue.put(PLAY_FROM_GUI)
-                    # update available controls
-                    self.detach_key("play", self.button_gif["processing"], self.button_img["play"])
-                    self.disable("play")
-                    self.enable("pause")
-                    self.enable("stop")
 
                     # nothing more to do if the test was skipped
                     if test_status in [STATUS_SKIP]:
@@ -570,22 +565,21 @@ class PausedPopUp(PopUp):
     """A popup to show when tests are paused."""
 
     def __init__(self, root, gui, status=None):
-        PopUp.__init__(self, root, gui, "Tests paused.", "Tests execution\nhas been paused.")
+        super(PausedPopUp, self).__init__(root, gui, "Tests paused.", "Tests execution\nhas been paused.")
 
         play_button = tk.Button(
             self.buttons_frame, text="Play".center(BT_TXT_LEN), command=self.play,
             compound="left", image=self.gui.button_img["play"])
         play_button.pack(side="left")
         Tooltip(play_button, text="Start or resume testing")
-        self.gui.buttons_refs["play"].append(play_button)
+        # self.gui.buttons_refs["play"].append(play_button)
 
         stop_button = tk.Button(
             self.buttons_frame, text="Abort".center(BT_TXT_LEN), command=self.abort,
             compound="left", image=self.gui.button_img["stop"])
         stop_button.pack(side="left")
         Tooltip(stop_button, text="Abort testing\nNo report generated")
-        self.gui.buttons_refs["stop"].append(stop_button)
-
+        # self.gui.buttons_refs["stop"].append(stop_button)
 
         self.ok_button.config(text="Ok".center(BT_TXT_LEN))
 
@@ -680,8 +674,7 @@ if __name__== "__main__":  # tests
         suite=suite,
         configs=["suite title", {'name': "scenario 1 title"}, {'name': "scenario 2 title"}],
         update_queue=Queue(),
-        pm_queue=Queue(),
-        runner_queue=Queue(),
+        request_queue=Queue(),
         file_validation= ["warning text"]*5
         )
     root.mainloop()
