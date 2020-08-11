@@ -95,35 +95,22 @@ class ProcessManager(object):
 
         # trace start request  (to unpause run process)
         self.evt_start = threading.Event()
-        # stdin to subprocesses, for raw input use
-        # https://stackoverflow.com/questions/13786974/raw-input-and-multiprocessing-in-python
-        # self.stdin = os.fdopen(os.dup(sys.stdin.fileno()))
-
+        self.evt_stop = threading.Event()
+   
         # access to runner output
         self.runner_output = MultithreadedQueueStream()
         queue_handler = logging.StreamHandler(self.runner_output)
         queue_handler.setLevel(LVL_RUN_CONTROL)
-        # logging.getLogger("_wetest_tests_results").addHandler(queue_handler)
 
         # process handles
         self.p_run_and_report = None
-        # self.p_parse_output = None
         self.p_gui_commands = None
-
-        # process status
-        self.p_run_and_report_started = threading.Event()
-        # self.p_parse_output_started = threading.Event()
-        self.p_gui_commands_started = threading.Event()
 
         # process data sharing
         self.no_gui = no_gui
         # applaying test selection to suite needs to be done in runner process
         self.selection_from_GUI = threading.Event()
         self.selection = ()  # use an imutable type to ensure namespace update
-        # store process pids for use by other processes
-        # self.pid_run_and_report = None
-        # self.pid_p_parse_output = None
-        # self.pid_p_gui_commands = None
 
         # results fill by test runner, used by report generator
         self.results = None
@@ -133,35 +120,16 @@ class ProcessManager(object):
         self.p_run_and_report = threading.Thread(
             target=self.run_and_report, name="run_and_report")
         self.p_run_and_report.start()
-        # self.pid_run_and_report = self.p_run_and_report.pid
-        # logger.debug("pid_run_and_report: %s", self.ns.pid_run_and_report)
-        self.p_run_and_report_started.wait()  # to be able to abort from p_parse_output
-
-    # def start_parser_process(self):
-    #     """start parse_output in another process"""
-    #     self.p_parse_output = threading.Thread(
-    #         target=self.parse_output, name="parse_output")
-    #     self.p_parse_output.start()
-    #     # self.pid_p_parse_output = self.p_parse_output.pid
-    #     # logger.debug("pid_p_parse_output: %s", self.ns.pid_p_parse_output)
-    #     # to be able to abort properly from p_gui_commands
-    #     self.p_parse_output_started.wait()
 
     def start_gui_command_process(self):
         """sstart gui_commands in another process"""
         self.p_gui_commands = threading.Thread(
             target=self.gui_commands, name="gui_commands")
-        # self.p_gui_commands.daemon = True # so that it can restart the runner and parser process
         self.p_gui_commands.start()
-        # self.pid_p_gui_commands = self.p_gui_commands.pid
-        # logger.debug("pid_p_gui_commands: %s", self.ns.pid_p_gui_commands)
-        # for homogeneity with other process start functions
-        self.p_gui_commands_started.wait()
 
     def run(self):
         """Start the various subprocess"""
         self.start_runner_process()
-        # self.start_parser_process()
 
         if not self.no_gui:
             self.start_gui_command_process()
@@ -169,21 +137,19 @@ class ProcessManager(object):
     def join(self):
         """Joins on the multiple process running"""
         self.p_run_and_report.join()
-        # self.p_parse_output.join()
         if self.p_gui_commands is not None:
             self.p_gui_commands.join()
 
     def terminate(self):
         """Terminates the multiple process running"""
-        self.p_run_and_report.terminate()
-        # self.p_parse_output.terminate()
-        # if self.p_gui_commands is not None:
-        #     self.p_gui_commands.terminate()
+        self.queue_to_runner.put(ABORT_FROM_MANAGER)
+        self.queue_to_gui.put(ABORT_FROM_MANAGER)
+        self.evt_stop.set()
+        self.evt_start.set()
 
     @quiet_exception(KeyboardInterrupt)
     def run_and_report(self):
         """Runs the tests and generate the report"""
-        self.p_run_and_report_started.set()
         logger.debug("Enter run_and_report")
         logger.warning("-----------------------")
         if self.no_gui:
@@ -194,6 +160,12 @@ class ProcessManager(object):
         # do not start running before start requested
         self.evt_start.wait()
         self.evt_start.clear()
+
+        # Stopping runner if execution was aborted.
+        if self.evt_stop.isSet():
+            self.evt_stop.clear()
+            logger.debug("Stopping run_and_report")
+            return
 
         if self.suite is not None:
 
@@ -221,7 +193,9 @@ class ProcessManager(object):
                 self.results = self.runner.run(self.suite)
 
             logger.info("Ran tests suite.")
-            self.queue_to_gui.put(END_OF_TESTS)
+            if self.results.shouldStop:
+                return
+            self.queue_to_pm.put(END_OF_TESTS)
 
         logger.warning("Done running tests.")
 
@@ -234,10 +208,6 @@ class ProcessManager(object):
             self.queue_to_gui.put(REPORT_GENERATED + " " + self.pdf_output)
         else:
             logger.warning("No report to generate.")
-
-        # time.sleep(0.1)  # Just enough to let the Queue finish
-        # https://stackoverflow.com/questions/36359528/broken-pipe-error-with-multiprocessing-queue.
-        # TODO is this solved now that Queue comes from a multiprocessing.Manager ?
 
         logger.debug("Leave run_and_report")
 
@@ -257,6 +227,11 @@ class ProcessManager(object):
 
     def start_play(self):
         """Call play runner after setting evt_start"""
+        # Empty queue from previous messages
+        if not self.queue_to_runner.empty():
+            self.queue_to_runner.get_nowait()
+        if not self.queue_to_gui.empty():
+            self.queue_to_gui.get_nowait()
         self.evt_start.set()
         self.play_runner()
 
@@ -268,24 +243,11 @@ class ProcessManager(object):
         self.queue_to_gui.put(PLAY_FROM_MANAGER)
         self.queue_to_runner.put(PLAY_FROM_MANAGER)
         logger.info("Playing.")
-        # os.kill(self.ns.pid_run_and_report, signal.SIGCONT)
         logger.debug("Continue run_and_report")
-
-    def stop_runner(self):
-        logger.warning("Aborting execution.")
-        self.queue_to_gui.put(ABORT_FROM_MANAGER)  # notify GUI
-        self.queue_to_runner.put(ABORT_FROM_MANAGER)
-        # os.kill(self.ns.pid_run_and_report, signal.SIGKILL) # actually stop tests
-        logger.debug("Killed run_and_report")
-
-    # def stop_parser(self):
-    #     # os.kill(self.ns.pid_p_parse_output, signal.SIGKILL)
-    #     logger.debug("Killed parse_output")
 
     @quiet_exception(KeyboardInterrupt)
     def gui_commands(self):
-        """Process instructions from self.queue_from_gui"""
-        self.p_gui_commands_started.set()
+        """Process instructions from self.queue_to_pm"""
         logger.debug("Enter gui_commands")
         while True:
             cmd = self.queue_to_pm.get()
@@ -308,12 +270,11 @@ class ProcessManager(object):
                 self.pause_runner()
 
             elif cmd == ABORT_FROM_GUI:
-                self.stop_runner()
+                self.terminate()
                 self.start_runner_process()  # enable replay from GUI
 
             elif cmd == END_OF_GUI:
-                self.no_gui = True
-                self.stop_runner()
+                self.terminate()
                 return
 
             # check for test requested continue
@@ -329,6 +290,7 @@ class ProcessManager(object):
             # check for test requested abort
             elif cmd == ABORT_FROM_TEST:
                 logger.debug("=> Abort from test")
+                self.terminate()
                 if self.no_gui:
                     break
                 else:
@@ -351,4 +313,3 @@ class ProcessManager(object):
         """Select only the test provided in selected, otherwise skip them."""
         logger.warning("Applying selection may take some time.")
         self.suite.apply_selection(selected, "Skipped from GUI.")
-

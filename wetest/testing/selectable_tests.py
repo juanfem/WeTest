@@ -66,7 +66,7 @@ class SelectableTestResult(unittest.TextTestResult):
                 self.queue_to_runner.get_nowait()
             self.queue_to_pm.put(PAUSE_FROM_TEST)
             cmd = self.queue_to_runner.get()
-            if cmd==PAUSE_FROM_MANAGER:
+            while cmd==PAUSE_FROM_MANAGER:
                 cmd = self.queue_to_runner.get()
             if cmd == PLAY_FROM_MANAGER:
                 return

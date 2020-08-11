@@ -344,11 +344,7 @@ def main():
         pm.run()
 
         if autoplay:
-            if not with_gui:  # no GUI with a play button
-                pm.start_play()
-            else:
-                gui.play()  # drawback: apply selection, although it is the same as from file
-                            # advantage: reset the test and therefore set prev_status correctly
+            pm.start_play()
         else:
             logger.warning("Waiting for user.")
             if not with_gui:  # no GUI with a play button
@@ -371,7 +367,7 @@ def main():
 
         pm.join()
     except (KeyboardInterrupt, SystemExit):
-        # pm.terminate()
+        pm.terminate()
         logger.error("Aborting WeTest.")
     else:
         # clean ending

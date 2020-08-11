@@ -519,7 +519,7 @@ def test_generator(test_data):
             finally:
                 if not SelectableTestResult.queue_to_runner.empty():
                     cmd = SelectableTestResult.queue_to_runner.get_nowait()
-                    if cmd == PAUSE_FROM_MANAGER:
+                    while cmd == PAUSE_FROM_MANAGER:
                         cmd = SelectableTestResult.queue_to_runner.get()
                     if cmd == ABORT_FROM_MANAGER:
                         self._outcome.result.stop()
