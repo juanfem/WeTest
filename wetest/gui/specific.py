@@ -26,32 +26,21 @@ standard_library.install_aliases()
 from builtins import hex
 from builtins import str
 import logging
-import multiprocessing
-import re
-import subprocess
 import tkinter as tk
 import tkinter.ttk
 
-from multiprocessing import Queue
-from queue import Empty
 from PIL import ImageTk, Image
 from pkg_resources import resource_filename
 
-from wetest.common.constants import (
-    SELECTION_FROM_GUI, START_FROM_GUI, RESUME_FROM_GUI,
-    PAUSE_FROM_GUI, ABORT_FROM_GUI,
-    END_OF_TESTS, REPORT_GENERATED,
-    PAUSE_FROM_MANAGER, ABORT_FROM_MANAGER, PLAY_FROM_MANAGER
-    )
 from wetest.common.constants import VERBOSE_FORMATTER, FILE_HANDLER, to_string
 
-from wetest.pvs.core   import PVData
 from wetest.pvs.naming import NamingError
 
 from wetest.gui.base import (
     BORDERWIDTH, INFO_WRAPLENGTH,
     ExistingTreeItem, MyTreeview, Tooltip, Icon, PopUpMenu, clip_generator,
     )
+
 # enable or not DEBUG displays
 DEBUG_INFOS = False  # show all subtest data in subtests tooltip
 

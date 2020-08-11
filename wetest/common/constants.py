@@ -32,6 +32,7 @@ START_FROM_GUI = "starting tests from GUI"
 RESUME_FROM_GUI = "resuming paused tests from GUI"
 PAUSE_FROM_GUI = "pausing tests from GUI"
 ABORT_FROM_GUI = "aborting test from GUI"
+END_OF_GUI = "GUI has been closed"
 
 ## messages from tests (then forwarded by runner output parser)
 CONTINUE_FROM_TEST = "continue requested by test"
