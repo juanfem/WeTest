@@ -70,6 +70,7 @@ mapping:
             "skip":       { type: bool  }
             "on_failure": { type: str, enum: [continue, pause, abort]}
             "retry":      { type: int   }
+            "protocol":   { type: str, enum: [CA, PVA] }
 
     "tests":
         desc: "Tests are described in this section"
@@ -184,3 +185,4 @@ mapping:
                       desc: |
                         number of retry before marking test as failed,
                         defaults to config's `retry`, -1 for infinite number of retry
+                  "protocol":   { type: str, enum: [CA, PVA] }

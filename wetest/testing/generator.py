@@ -24,10 +24,9 @@ import time
 import timeit
 import unittest
 
-import epics
-
 from .selectable_tests import SelectableTestCase, SelectableTestResult
 
+from wetest.pvs.core import PVConnection
 from wetest.common.constants import CONTINUE_FROM_TEST, PAUSE_FROM_TEST, ABORT_FROM_TEST
 from wetest.common.constants import LVL_TEST_ERRORED, LVL_TEST_FAILED, LVL_TEST_SKIPPED
 from wetest.common.constants import LVL_TEST_SUCCESS, LVL_TEST_RUNNING, LVL_RUN_CONTROL
@@ -96,7 +95,7 @@ class TestData(object):
                  getter=None, setter=None,
                  get_value=None, set_value=None,
                  prefix='', delay=0, margin=None, delta=None,
-                 test_message=None, subtest_message=None):
+                 test_message=None, subtest_message=None, protocol='PVA'):
         """Initialize a TestData structure.
 
         :param test_title: The test name.
@@ -114,6 +113,7 @@ class TestData(object):
         :param delta: Allowed interval around read-back value.
         :param test_message: If any a test message.
         :param subtest_message: If any a subtest message.
+        :param protocol: EPICS protocol: either CA or PVA.
         """
         if on_failure.lower() not in [ABORT, PAUSE, CONTINUE]:
             logger.critical("Unexpected on_failure value: %s" % on_failure)
@@ -135,6 +135,7 @@ class TestData(object):
         self.delta = delta
         self.test_message = test_message
         self.subtest_message = subtest_message
+        self.protocol = protocol
         logger.debug("set_value: %s (%s)", set_value, type(set_value))
         logger.debug("get_value: %s (%s)", get_value, type(get_value))
 
@@ -173,6 +174,7 @@ class TestData(object):
         output += '\n\ttest_message: %s' % self.test_message
         output += '\n\tsubtest_message: %s' % self.subtest_message
         output += '\n\tdesc: %s' % self.desc
+        output += '\n\protocol: %s' % self.protocol
         return output
 
 
@@ -307,7 +309,7 @@ def test_generator(test_data):
 
                 setter_error = True
                 if test_data.setter and test_data.set_value is not None:
-                    setter = epics.PV(test_data.setter)
+                    setter = PVConnection.get_pv_connection(test_data.setter, test_data.protocol)
                     self.assertIsNotNone(setter.status,
                                          "Unable to connect to setter PV %s" % (setter.pvname))
 
@@ -340,7 +342,7 @@ def test_generator(test_data):
                 getter_error = True
                 if test_data.getter and test_data.get_value is not None:
 
-                    getter = epics.PV(test_data.getter)
+                    getter = PVConnection.get_pv_connection(test_data.getter, test_data.protocol)
                     self.assertIsNotNone(getter.status,
                                          "Unable to connect to getter PV %s" % (getter.pvname))
 
@@ -567,6 +569,7 @@ class TestsGenerator(object):
             on_failure = test_raw_data.get(
                 'on_failure', self.get_config("on_failure"))
             retry = test_raw_data.get('retry', self.get_config("retry"))
+            protocol = test_raw_data.get('protocol', self.get_config("protocol"))
 
             # generate subtests
             subtests_list = []
@@ -674,6 +677,7 @@ class TestsGenerator(object):
                         margin=get_margin(test_raw_data),
                         delta=get_delta(test_raw_data),
                         test_message=test_raw_data.get('message', None),
+                        protocol=protocol,
                     )
 
                     subtests_list.append(test_data)
@@ -718,6 +722,7 @@ class TestsGenerator(object):
                         margin=get_margin(test_raw_data),
                         delta=get_delta(test_raw_data),
                         test_message=test_raw_data.get('message', None),
+                        protocol=protocol,
                     )
 
                     subtests_list.append(test_data)
@@ -789,7 +794,8 @@ class TestsGenerator(object):
                         margin=get_margin(command),
                         delta=get_delta(command),
                         test_message=test_raw_data.get('message', None),
-                        subtest_message=command.get('message', None)
+                        subtest_message=command.get('message', None),
+                        protocol=protocol,
                     )
 
                     subtests_list.append(test_data)

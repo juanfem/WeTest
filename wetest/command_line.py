@@ -293,8 +293,7 @@ def main():
         all_connected, pv_refs = True, {}
     else:
         all_connected, pv_refs = PVsTable(queue_to_gui).register_pvs(
-            pv_list=pvs_from_files,
-            suite=suite)
+            pv_list=pvs_from_files, suite=suite)
 
     # show naming compatibility in CLI
     for pv_name, pv in list(pv_refs.items()):

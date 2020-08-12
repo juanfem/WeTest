@@ -422,6 +422,7 @@ class ScenarioReader(object):
             wetest_file["config"].setdefault("skip",   False)
             wetest_file["config"].setdefault("on_failure", CONTINUE if wetest_file["config"]["type"]=="unit" else PAUSE)
             wetest_file["config"].setdefault("retry",  0)
+            wetest_file["config"].setdefault("protocol",  "PVA")
 
         # transform local tests into something similar to an imported scenario
         local_tests = {block:content for block,content in wetest_file.items() if block in ["config", "tests"]}
@@ -599,6 +600,11 @@ class ScenarioReader(object):
                 errors.append(
                     """`retry` in `config` is supposed to be an integer but got: %s"""
                     %config["retry"])
+
+            if "protocol" in config and not (config["protocol"]=="CA" or config["protocol"]=="PVA"):
+                errors.append(
+                    """`protocol` in `config` is supposed to be either "CA" or "PVA" but got: %s"""
+                    %config["protocol"])
 
         return errors
 
