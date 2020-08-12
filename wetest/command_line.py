@@ -37,7 +37,6 @@ import tkinter as tk
 import time
 
 import colorlog
-import epics
 
 from wetest.common.constants import (
     SELECTION_FROM_GUI, START_FROM_GUI, RESUME_FROM_GUI, PAUSE_FROM_GUI, ABORT_FROM_GUI,
