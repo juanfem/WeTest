@@ -601,7 +601,7 @@ class ScenarioReader(object):
                     """`retry` in `config` is supposed to be an integer but got: %s"""
                     %config["retry"])
 
-            if "protocol" in config and not (config["protocol"]=="CA" or config["protocol"]=="PVA"):
+            if "protocol" in config and not (config["protocol"].upper()=="CA" or config["protocol"].upper()=="PVA"):
                 errors.append(
                     """`protocol` in `config` is supposed to be either "CA" or "PVA" but got: %s"""
                     %config["protocol"])
