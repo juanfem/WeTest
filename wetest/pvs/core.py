@@ -92,10 +92,10 @@ class PVConnection(object):
 
     @classmethod
     def get_pv_connection(cls, name, protocol, connection_callback=None):
-        if protocol == 'CA':
+        if protocol.upper() == 'CA':
             print('Using CA (d)')
             return cls.CaConnection(name, connection_callback)
-        elif protocol == 'PVA':
+        elif protocol.upper() == 'PVA':
             print('Using PVA (d)')
             return cls.PvaConnection(name, connection_callback)
 
