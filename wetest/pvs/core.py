@@ -145,6 +145,9 @@ class PVConnection(object):
         def get(self):
             return self.ctxt.get(self.pvname)
 
+        def rpc(self, value):
+            return self.ctxt.rpc(self.pvname, value)
+
 
 class PVInfo(object):
     """A convenience class to manage PVData()
