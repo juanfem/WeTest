@@ -14,9 +14,9 @@
 
 from wetest.common.constants import LVL_PV_DISCONNECTED, LVL_PV_CONNECTED
 from wetest.common.constants import TERSE_FORMATTER, FILE_HANDLER
-import p4p
-from p4p.client.thread import Context
 import epics
+epics.ca.create_context()
+from p4p.client.thread import Context
 import time
 import logging
 from builtins import object
