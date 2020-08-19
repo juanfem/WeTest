@@ -15,6 +15,7 @@
 from wetest.common.constants import LVL_PV_DISCONNECTED, LVL_PV_CONNECTED
 from wetest.common.constants import TERSE_FORMATTER, FILE_HANDLER
 import epics
+import p4p
 from p4p.client.thread import Context
 import time
 import logging
@@ -145,7 +146,19 @@ class PVConnection(object):
             return self.ctxt.get(self.pvname)
 
         def rpc(self, value):
-            return self.ctxt.rpc(self.pvname, value)
+            type_list = self.build_type(value)
+            uri = p4p.nt.NTURI(type_list).wrap(self.pvname, kws=value)
+            return self.ctxt.rpc(self.pvname, uri)
+
+
+        def build_type(self, data):
+            anames = []
+            for key in data:
+                if type(data[key])==dict:
+                    anames.append((key, ('S', None, self.build_type(data[key]))))
+                else:
+                    anames.append((key, 's'))
+            return anames
 
 
 class PVInfo(object):

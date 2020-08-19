@@ -95,7 +95,9 @@ class TestData(object):
                  getter=None, setter=None,
                  get_value=None, set_value=None,
                  prefix='', delay=0, margin=None, delta=None,
-                 test_message=None, subtest_message=None, protocol='PVA'):
+                 test_message=None, subtest_message=None, protocol='PVA',
+                 pvlogger=None):
+
         """Initialize a TestData structure.
 
         :param test_title: The test name.
@@ -114,6 +116,7 @@ class TestData(object):
         :param test_message: If any a test message.
         :param subtest_message: If any a subtest message.
         :param protocol: EPICS protocol: either CA or PVA.
+        :param pvlogger: PV and configuration to save data using ENeXAr.
         """
         if on_failure.lower() not in [ABORT, PAUSE, CONTINUE]:
             logger.critical("Unexpected on_failure value: %s" % on_failure)
@@ -136,6 +139,8 @@ class TestData(object):
         self.test_message = test_message
         self.subtest_message = subtest_message
         self.protocol = protocol
+        self.pvlogger = pvlogger
+
         logger.debug("set_value: %s (%s)", set_value, type(set_value))
         logger.debug("get_value: %s (%s)", get_value, type(get_value))
 
@@ -174,7 +179,8 @@ class TestData(object):
         output += '\n\ttest_message: %s' % self.test_message
         output += '\n\tsubtest_message: %s' % self.subtest_message
         output += '\n\tdesc: %s' % self.desc
-        output += '\n\protocol: %s' % self.protocol
+        output += '\n\tprotocol: %s' % self.protocol
+        output += '\n\tpvlogger: %s' % self.pvlogger
         return output
 
 
@@ -486,6 +492,19 @@ def test_generator(test_data):
                 test_data.exception = None
                 tr_logger.log(
                     LVL_TEST_SUCCESS, "Success of %s    (in %.3fs) ", test_data.id, test_data.elapsed)
+
+                # Logging data using ENeXAr
+                if test_data.pvlogger != None:
+                    for pv in test_data.pvlogger:
+                        enexar = PVConnection.get_pv_connection(pv['server']+'LOGNWAIT', 'PVA')
+                        rpc_value = pv.copy()
+                        rpc_value.pop('server')
+                        if 'acquisitions' in rpc_value:
+                            rpc_value['n_acq'] = str(rpc_value.pop('acquisitions'))
+                        if not rpc_value['path'].endswith('.h5') and not rpc_value['path'].endswith('.hdf5'):
+                            rpc_value['path'] = rpc_value['path']+'.h5'
+                        status = enexar.rpc(rpc_value)
+
                 break  # no exception then no need for retry
 
             # test fails
@@ -570,6 +589,11 @@ class TestsGenerator(object):
                 'on_failure', self.get_config("on_failure"))
             retry = test_raw_data.get('retry', self.get_config("retry"))
             protocol = test_raw_data.get('protocol', self.get_config("protocol"))
+
+            if "logger" in test_raw_data:
+                pvlogger = test_raw_data['logger']
+            else:
+                pvlogger = None
 
             # generate subtests
             subtests_list = []
@@ -678,6 +702,7 @@ class TestsGenerator(object):
                         delta=get_delta(test_raw_data),
                         test_message=test_raw_data.get('message', None),
                         protocol=protocol,
+                        pvlogger=pvlogger,
                     )
 
                     subtests_list.append(test_data)
@@ -723,6 +748,7 @@ class TestsGenerator(object):
                         delta=get_delta(test_raw_data),
                         test_message=test_raw_data.get('message', None),
                         protocol=protocol,
+                        pvlogger=pvlogger,
                     )
 
                     subtests_list.append(test_data)
@@ -796,6 +822,7 @@ class TestsGenerator(object):
                         test_message=test_raw_data.get('message', None),
                         subtest_message=command.get('message', None),
                         protocol=protocol,
+                        pvlogger=pvlogger,
                     )
 
                     subtests_list.append(test_data)
