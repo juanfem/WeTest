@@ -38,7 +38,6 @@ class SelectableTestResult(unittest.TextTestResult):
         self.queue_to_gui.put([test._testMethodName, STATUS_FAIL,
                                test.test_data[test._testMethodName].elapsed, test.test_data[test._testMethodName].exception])
         self.handler_errors(test)
-        
 
     def addSkip(self, test, reason):
         self.queue_to_gui.put([test._testMethodName, STATUS_RUN, None, None])
@@ -66,7 +65,7 @@ class SelectableTestResult(unittest.TextTestResult):
                 self.queue_to_runner.get_nowait()
             self.queue_to_pm.put(PAUSE_FROM_TEST)
             cmd = self.queue_to_runner.get()
-            while cmd==PAUSE_FROM_MANAGER:
+            while cmd == PAUSE_FROM_MANAGER:
                 cmd = self.queue_to_runner.get()
             if cmd == PLAY_FROM_MANAGER:
                 return
@@ -158,11 +157,3 @@ class SelectableTestSuite(unittest.TestSuite):
         for test_id in selection:
             if test_id in already_skipped:
                 self.select(test_id)
-
-    # def __str__(self):
-    #     """Debug display for the suite."""
-    #     output = ""
-    #     output += "selected tests:\n"+" ".join(self._selected_tests)
-    #     output += "\n"
-    #     output += "skipped tests:\n"+" ".join(self._skipped_tests)
-    #     return output

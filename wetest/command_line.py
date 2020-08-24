@@ -37,7 +37,6 @@ import tkinter as tk
 import time
 
 import colorlog
-import epics
 
 from wetest.common.constants import (
     SELECTION_FROM_GUI, START_FROM_GUI, RESUME_FROM_GUI, PAUSE_FROM_GUI, ABORT_FROM_GUI,
@@ -294,8 +293,7 @@ def main():
         all_connected, pv_refs = True, {}
     else:
         all_connected, pv_refs = PVsTable(queue_to_gui).register_pvs(
-            pv_list=pvs_from_files,
-            suite=suite)
+            pv_list=pvs_from_files, suite=suite)
 
     # show naming compatibility in CLI
     for pv_name, pv in list(pv_refs.items()):
