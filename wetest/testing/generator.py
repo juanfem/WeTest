@@ -496,20 +496,23 @@ def test_generator(test_data):
 
                 # Logging data using ENeXAr
                 if test_data.pvlogger != None:
-                    for pv in test_data.pvlogger:
-                        enexar = PVConnection.get_pv_connection(
-                            pv['server']+'LOGNWAIT', 'PVA')
-                        rpc_value = pv.copy()
-                        rpc_value.pop('server')
-                        if 'acquisitions' in rpc_value:
-                            rpc_value['n_acq'] = str(
-                                rpc_value.pop('acquisitions'))
-                        if not rpc_value['path'].endswith('.h5') and not rpc_value['path'].endswith('.hdf5'):
-                            rpc_value['path'] = rpc_value['path']+'.h5'
-                        status = enexar.rpc(rpc_value)
-                        if status != True:
-                            logger.error(
-                                'An error ocurred while trying to log PV {0} to ENeXAr. Probably the file already exists and has been closed.'.format(rpc_value['pv']))
+                    try:
+                        for pv in test_data.pvlogger:
+                            enexar = PVConnection.get_pv_connection(
+                                pv['server']+'LOGNWAIT', 'PVA')
+                            rpc_value = pv.copy()
+                            rpc_value.pop('server')
+                            if 'acquisitions' in rpc_value:
+                                rpc_value['n_acq'] = str(
+                                    rpc_value.pop('acquisitions'))
+                            if not rpc_value['path'].endswith('.h5') and not rpc_value['path'].endswith('.hdf5'):
+                                rpc_value['path'] = rpc_value['path']+'.h5'
+                            status = enexar.rpc(rpc_value)
+                            if status != True:
+                                logger.error(
+                                    'An error ocurred while trying to log PV {0} to ENeXAr. Probably the file already exists and has been closed.'.format(rpc_value['pv']))
+                    except:
+                        logger.error('Could not connect to the ENeXAr server with prefix "{0}". Please check that it is available.'.format(pv['server']))
 
                 break  # no exception then no need for retry
 
