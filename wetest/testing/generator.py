@@ -97,7 +97,6 @@ class TestData(object):
                  prefix='', delay=0, margin=None, delta=None,
                  test_message=None, subtest_message=None, protocol='PVA',
                  pvlogger=None):
-
         """Initialize a TestData structure.
 
         :param test_title: The test name.
@@ -270,7 +269,7 @@ def test_generator(test_data):
         value of 10%, all values between 9V and 11V will be considered as good
         value.
 
-        """        
+        """
         if test_data.on_failure == CONTINUE:
             on_failure = CONTINUE_FROM_TEST
         elif test_data.on_failure == PAUSE:
@@ -315,7 +314,8 @@ def test_generator(test_data):
 
                 setter_error = True
                 if test_data.setter and test_data.set_value is not None:
-                    setter = PVConnection.get_pv_connection(test_data.setter, test_data.protocol)
+                    setter = PVConnection.get_pv_connection(
+                        test_data.setter, test_data.protocol)
                     self.assertIsNotNone(setter.status,
                                          "Unable to connect to setter PV %s" % (setter.pvname))
 
@@ -348,7 +348,8 @@ def test_generator(test_data):
                 getter_error = True
                 if test_data.getter and test_data.get_value is not None:
 
-                    getter = PVConnection.get_pv_connection(test_data.getter, test_data.protocol)
+                    getter = PVConnection.get_pv_connection(
+                        test_data.getter, test_data.protocol)
                     self.assertIsNotNone(getter.status,
                                          "Unable to connect to getter PV %s" % (getter.pvname))
 
@@ -496,14 +497,19 @@ def test_generator(test_data):
                 # Logging data using ENeXAr
                 if test_data.pvlogger != None:
                     for pv in test_data.pvlogger:
-                        enexar = PVConnection.get_pv_connection(pv['server']+'LOGNWAIT', 'PVA')
+                        enexar = PVConnection.get_pv_connection(
+                            pv['server']+'LOGNWAIT', 'PVA')
                         rpc_value = pv.copy()
                         rpc_value.pop('server')
                         if 'acquisitions' in rpc_value:
-                            rpc_value['n_acq'] = str(rpc_value.pop('acquisitions'))
+                            rpc_value['n_acq'] = str(
+                                rpc_value.pop('acquisitions'))
                         if not rpc_value['path'].endswith('.h5') and not rpc_value['path'].endswith('.hdf5'):
                             rpc_value['path'] = rpc_value['path']+'.h5'
                         status = enexar.rpc(rpc_value)
+                        if status != True:
+                            logger.error(
+                                'An error ocurred while trying to log PV {0} to ENeXAr. Probably the file already exists and has been closed.'.format(rpc_value['pv']))
 
                 break  # no exception then no need for retry
 
@@ -588,7 +594,8 @@ class TestsGenerator(object):
             on_failure = test_raw_data.get(
                 'on_failure', self.get_config("on_failure"))
             retry = test_raw_data.get('retry', self.get_config("retry"))
-            protocol = test_raw_data.get('protocol', self.get_config("protocol"))
+            protocol = test_raw_data.get(
+                'protocol', self.get_config("protocol"))
 
             if "logger" in test_raw_data:
                 pvlogger = test_raw_data['logger']

@@ -146,16 +146,16 @@ class PVConnection(object):
             return self.ctxt.get(self.pvname)
 
         def rpc(self, value):
-            type_list = self.build_type(value)
+            type_list = self._build_type(value)
             uri = p4p.nt.NTURI(type_list).wrap(self.pvname, kws=value)
             return self.ctxt.rpc(self.pvname, uri)
 
-
-        def build_type(self, data):
+        def _build_type(self, data):
             anames = []
             for key in data:
-                if type(data[key])==dict:
-                    anames.append((key, ('S', None, self.build_type(data[key]))))
+                if type(data[key]) == dict:
+                    anames.append(
+                        (key, ('S', None, self._build_type(data[key]))))
                 else:
                     anames.append((key, 's'))
             return anames
