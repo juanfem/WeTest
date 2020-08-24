@@ -4,3 +4,4 @@ pyepics==3.4.2
 pykwalify==1.7.0
 PyYAML==5.3.1
 reportlab==3.5.45
+p4p==3.5.1

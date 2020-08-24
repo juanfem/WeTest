@@ -1,7 +1,7 @@
-WeTest
+WeTest - ESS version
 ======
 
-Tests automation utility for EPICS.
+Tests automation utility for EPICS7.
 
 WeTest reads YAML files describing tests targeting EPICS PV,
 executes these tests in CLI with or without a GUI,
@@ -12,8 +12,8 @@ Installation
 
 ### Python and Tkinter
 
-WeTest is implemented in Python 2.7, which therefore needs to be installed
-on your machine (support for Python 3.x is planned but not yet available).
+WeTest is compatible with both Python 2.7 and Python 3.7+, which therefore needs to be installed
+on your machine.
 
 Usually the `Tkinter` module should be included in your python installation,
 if it is not the case you will also need to install the corresponding package.
@@ -28,8 +28,7 @@ For example in CentOS:
 sudo yum install tkinter
 ```
 
-WeTest is currently successfully running on CentOS 7 and Ubuntu 18.04
-(support for Windows is planned but not yet available).
+WeTest is currently successfully running on CentOS 7, Ubuntu 18.04, and macOS 10.15.5.
 
 ### Install using virtualenv
 
@@ -67,10 +66,10 @@ deactivate
 To install conda if it's not already installed see:
 https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html
 
-Once installed, create a python 2.7 environment for WeTest and activate it:
+Once installed, create a python 3.7 environment for WeTest and activate it:
 
 ```bash
-conda create -yn wetest python=2.7
+conda create -yn wetest python=3.7
 conda activate wetest
 ```
 
@@ -91,16 +90,7 @@ conda deactivate
 
 ### Setup pyepics
 
-WeTest relies on the `pyepics` module, and therefore depending on your EPICS installation
-you might need to set up the `PYEPICS_LIBCA` environment variable manually.
-
-For instance:
-```bash
-export PYEPICS_LIBCA=/opt/epics/bases/base-3.14.12.5/lib/centos7-x86_64/libca.so
-```
-
-You can find full explanation [here](http://cars9.uchicago.edu/software/python/pyepics3/installation.html#getting-started-setting-up-the-epics-environment).
-
+WeTest relies on the `pyepics`, `p4p`, and the `epicscorelibs` modules.
 
 Run WeTest
 ----------
@@ -232,6 +222,15 @@ Content expected in a test:
   - `ignore`:    ignore this command even if test is not ignored
   - `skip`:      whether the command should be executed or not
   - `on_failure`: continue, pause or abort if the command fails
+
+- `protocol`: it is an optional parameter to define the EPICS protocol that must be used by default. It can be either `CA` or `PVA`. By default, PVA is used. Can also be defined in the `config` section.
+
+- `pvlogger`: a list of PVs that should be logged after the test is executed successfully, together with metadata. It takes the following subfields:
+  - `pv`: the PV name
+  - `server`: prefix of the ENeXAr server
+  - `path`: path to the file where to store the data (under ENeXAr root directory)
+  - `acquisitions`: number of acquisitons to take (1 by default)
+  - `metadata`: optional metadata following essnexus definition
 
 A test should have one an only one of the three "test kind":
 `range`, `values` or `commands`

@@ -28,6 +28,7 @@ import pkg_resources
 import re
 import sys
 import time
+import tempfile
 
 from pkg_resources import resource_filename
 from pykwalify import errors
@@ -387,7 +388,9 @@ class ScenarioReader(object):
         self.version_is_supported = self._version_is_supported()
 
         # Check YAML file schema and other validation
-        tempo_file_path = '/tmp/no_macros.yml'
+        tempo_file = tempfile.NamedTemporaryFile(mode='w', suffix='.yml', delete=False)
+        tempo_file_path = tempo_file.name
+
         with open(tempo_file_path, 'w') as yml_wo_macros:
             yaml.dump(self.deserialized, yml_wo_macros, default_flow_style=False)
         self.file_is_valid = self._validate_file(tempo_file_path)
