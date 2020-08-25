@@ -3,5 +3,6 @@ numpy>=1.12.1
 pyepics==3.4.2
 pykwalify==1.7.0
 PyYAML==5.3.1
-reportlab==3.5.45
+reportlab==3.5.47
 p4p==3.5.1
+future==0.18.2
