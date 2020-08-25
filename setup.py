@@ -23,7 +23,7 @@ except ImportError:  # for pip <= 9.0.3
 install_reqs = parse_requirements('requirements.txt', session='hack')
 try:  # for pip >= 10
     reqs = [str(ir.requirement) for ir in install_reqs]
-except ImportError:  # for pip <= 9.0.3
+except AttributeError:  # for pip <= 9.0.3
     reqs = [str(ir.req) for ir in install_reqs]
 
 
