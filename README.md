@@ -225,7 +225,7 @@ Content expected in a test:
 
 - `protocol`: it is an optional parameter to define the EPICS protocol that must be used by default. It can be either `CA` or `PVA`. By default, PVA is used. Can also be defined in the `config` section.
 
-- `pvlogger`: a list of PVs that should be logged after the test is executed successfully, together with metadata. It takes the following subfields:
+- `logger`: a list of PVs that should be logged after the test is executed successfully, together with metadata. It takes the following subfields:
   - `pv`: the PV name
   - `server`: prefix of the ENeXAr server
   - `path`: path to the file where to store the data (under ENeXAr root directory)
