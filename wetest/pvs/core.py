@@ -112,8 +112,8 @@ class PVConnection(object):
         def put(self, value):
             self.pv.put(value)
 
-        def get(self):
-            return self.pv.get()
+        def get(self, **kwargs):
+            return self.pv.get(**kwargs)
 
     class PvaConnection():
         ctxt = Context('pva')
@@ -142,7 +142,7 @@ class PVConnection(object):
         def put(self, value):
             self.ctxt.put(self.pvname, value)
 
-        def get(self):
+        def get(self, **kwargs):
             return self.ctxt.get(self.pvname)
 
         def rpc(self, value):
