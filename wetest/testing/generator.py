@@ -845,7 +845,8 @@ class TestsGenerator(object):
                         on_failure=on_failure,
                         test_title=test_raw_data['name'],
                         subtest_title=NO_KIND,
-                        skip=skip,)
+                        skip=skip,
+                        protocol=protocol,)
 
                     subtests_list.append(test_data)
 
@@ -878,7 +879,8 @@ class TestsGenerator(object):
                     skip=skip,
                     setter=command,
                     set_value=value,
-                    prefix=prefix
+                    prefix=prefix,
+                    protocol=protocol,
                 )
 
                 subtests_list.append(finally_data)
