@@ -21,7 +21,6 @@ import logging
 import numpy
 import random
 import time
-import timeit
 import unittest
 
 from .selectable_tests import SelectableTestCase, SelectableTestResult
@@ -32,12 +31,12 @@ from wetest.common.constants import LVL_TEST_ERRORED, LVL_TEST_FAILED, LVL_TEST_
 from wetest.common.constants import LVL_TEST_SUCCESS, LVL_TEST_RUNNING, LVL_RUN_CONTROL
 from wetest.common.constants import VERBOSE_FORMATTER, TERSE_FORMATTER, FILE_HANDLER
 from wetest.common.constants import WeTestError, to_string
-from wetest.common.constants import PLAY_FROM_MANAGER, PAUSE_FROM_MANAGER, ABORT_FROM_MANAGER
-
-from wetest.gui.specific import (
-    STATUS_UNKNOWN, STATUS_RUN, STATUS_RETRY, STATUS_SKIP,
-    STATUS_ERROR, STATUS_FAIL, STATUS_SUCCESS
+from wetest.common.constants import (
+    PAUSE_FROM_MANAGER,
+    ABORT_FROM_MANAGER,
 )
+
+from wetest.gui.specific import STATUS_RETRY
 
 from wetest.testing.reader import ABORT, PAUSE, CONTINUE
 
@@ -67,6 +66,7 @@ class EmptyTest(WeTestError):
 
     Exception raised executing a test without getter nor setter.
     """
+
     pass
 
 
@@ -76,6 +76,7 @@ class InconsistantTest(WeTestError):
     Exception raised executing a test that misses a field,
     for instance a setter was provided but not set_value.
     """
+
     pass
 
 
@@ -90,13 +91,27 @@ class TestNotFound(WeTestError):
 class TestData(object):
     """A generic test representation."""
 
-    def __init__(self, on_failure, test_title, subtest_title, test_id='',
-                 skip=False, retry=0,
-                 getter=None, setter=None,
-                 get_value=None, set_value=None,
-                 prefix='', delay=0, margin=None, delta=None,
-                 test_message=None, subtest_message=None, protocol='PVA',
-                 pvlogger=None):
+    def __init__(
+        self,
+        on_failure,
+        test_title,
+        subtest_title,
+        test_id="",
+        skip=False,
+        retry=0,
+        getter=None,
+        setter=None,
+        get_value=None,
+        set_value=None,
+        prefix="",
+        delay=0,
+        margin=None,
+        delta=None,
+        test_message=None,
+        subtest_message=None,
+        protocol="PVA",
+        pvlogger=None,
+    ):
         """Initialize a TestData structure.
 
         :param test_title: The test name.
@@ -155,31 +170,34 @@ class TestData(object):
         if self.getter is not None and self.prefix is not None:
             self.getter = self.prefix + self.getter
 
-        self.desc = str(self.test_title).replace("\n", " ") + \
-            ": " + str(self.subtest_title).replace("\n", " ")
+        self.desc = (
+            str(self.test_title).replace("\n", " ")
+            + ": "
+            + str(self.subtest_title).replace("\n", " ")
+        )
 
         logger.debug("%s", self)
 
     def __str__(self):
         output = self.__repr__()
-        output += '\n\ttest_title: %s' % self.test_title
-        output += '\n\tsubtest_title: %s' % self.subtest_title
-        output += '\n\tid: %s' % self.id
-        output += '\n\ton_failure: %s' % self.on_failure
-        output += '\n\tretry: %s' % self.retry
-        output += '\n\tgetter: %s' % self.getter
-        output += '\n\tsetter: %s' % self.setter
-        output += '\n\tget_value: %s' % self.get_value
-        output += '\n\tset_value: %s' % self.set_value
-        output += '\n\tprefix: %s' % self.prefix
-        output += '\n\tdelay: %s' % self.delay
-        output += '\n\tmargin: %s' % self.margin
-        output += '\n\tdelta: %s' % self.delta
-        output += '\n\ttest_message: %s' % self.test_message
-        output += '\n\tsubtest_message: %s' % self.subtest_message
-        output += '\n\tdesc: %s' % self.desc
-        output += '\n\tprotocol: %s' % self.protocol
-        output += '\n\tpvlogger: %s' % self.pvlogger
+        output += "\n\ttest_title: %s" % self.test_title
+        output += "\n\tsubtest_title: %s" % self.subtest_title
+        output += "\n\tid: %s" % self.id
+        output += "\n\ton_failure: %s" % self.on_failure
+        output += "\n\tretry: %s" % self.retry
+        output += "\n\tgetter: %s" % self.getter
+        output += "\n\tsetter: %s" % self.setter
+        output += "\n\tget_value: %s" % self.get_value
+        output += "\n\tset_value: %s" % self.set_value
+        output += "\n\tprefix: %s" % self.prefix
+        output += "\n\tdelay: %s" % self.delay
+        output += "\n\tmargin: %s" % self.margin
+        output += "\n\tdelta: %s" % self.delta
+        output += "\n\ttest_message: %s" % self.test_message
+        output += "\n\tsubtest_message: %s" % self.subtest_message
+        output += "\n\tdesc: %s" % self.desc
+        output += "\n\tprotocol: %s" % self.protocol
+        output += "\n\tpvlogger: %s" % self.pvlogger
         return output
 
 
@@ -191,17 +209,20 @@ def add_doc(value):
     :returns: Function's docstring.
 
     """
+
     def _doc(func):
         func.__doc__ = value
         return func
+
     return _doc
 
 
 def skipped_test_factory(test_data, reason):
     def skipped_test(self):
         tr_logger.log(LVL_TEST_SKIPPED, "")
-        tr_logger.log(LVL_TEST_SKIPPED, "Skipping   %s    %s",
-                      test_data.id, test_data.desc)
+        tr_logger.log(
+            LVL_TEST_SKIPPED, "Skipping   %s    %s", test_data.id, test_data.desc
+        )
         raise unittest.SkipTest(reason)
 
     return skipped_test
@@ -258,7 +279,7 @@ def test_generator(test_data):
 
     :returns: a test function, to be add to a unittest.TestCase.
     """
-    logger.info('Generating test: %s', test_data.desc)
+    logger.info("Generating test: %s", test_data.desc)
 
     @add_doc(test_data.desc)
     def test(self):
@@ -277,8 +298,9 @@ def test_generator(test_data):
         else:
             on_failure = ABORT_FROM_TEST
         tr_logger.log(LVL_TEST_RUNNING, "")
-        tr_logger.log(LVL_TEST_RUNNING, "Running    %s    %s",
-                      test_data.id, test_data.desc)
+        tr_logger.log(
+            LVL_TEST_RUNNING, "Running    %s    %s", test_data.id, test_data.desc
+        )
 
         nb_exec = 0
         setter_error = False
@@ -296,28 +318,35 @@ def test_generator(test_data):
 
                 if test_data.setter is not None and test_data.set_value is None:
                     raise InconsistantTest(
-                        "[setter error] No value associated to setter.")
+                        "[setter error] No value associated to setter."
+                    )
 
                 if test_data.getter is not None and test_data.get_value is None:
                     raise InconsistantTest(
-                        "[getter error] No value associated to getter.")
+                        "[getter error] No value associated to getter."
+                    )
 
                 if test_data.set_value is not None and test_data.setter is None:
                     raise InconsistantTest(
-                        "[setter error] No setter associated to set value.")
+                        "[setter error] No setter associated to set value."
+                    )
 
                 if test_data.get_value is not None and test_data.getter is None:
                     raise InconsistantTest(
-                        "[getter error] No getter associated to get value.")
+                        "[getter error] No getter associated to get value."
+                    )
 
                 # Set PV if required
 
                 setter_error = True
                 if test_data.setter and test_data.set_value is not None:
                     setter = PVConnection.get_pv_connection(
-                        test_data.setter, test_data.protocol)
-                    self.assertIsNotNone(setter.status,
-                                         "Unable to connect to setter PV %s" % (setter.pvname))
+                        test_data.setter, test_data.protocol
+                    )
+                    self.assertIsNotNone(
+                        setter.status,
+                        "Unable to connect to setter PV %s" % (setter.pvname),
+                    )
 
                     # pyepics expect single characters to be passed as integer
                     # convert string to int or float where possible
@@ -349,18 +378,28 @@ def test_generator(test_data):
                 if test_data.getter and test_data.get_value is not None:
 
                     getter = PVConnection.get_pv_connection(
-                        test_data.getter, test_data.protocol)
-                    self.assertIsNotNone(getter.status,
-                                         "Unable to connect to getter PV %s" % (getter.pvname))
+                        test_data.getter, test_data.protocol
+                    )
+                    self.assertIsNotNone(
+                        getter.status,
+                        "Unable to connect to getter PV %s" % (getter.pvname),
+                    )
 
                     # check a string value
                     if isinstance(test_data.get_value, str):
                         expected_value = test_data.get_value
                         measured_value = getter.get(as_string=True)
 
-                        self.assertEqual(expected_value, measured_value,
-                                         "Expected %s to be %s, but got %s"
-                                         % (getter.pvname, to_string(expected_value), to_string(measured_value)))
+                        self.assertEqual(
+                            expected_value,
+                            measured_value,
+                            "Expected %s to be %s, but got %s"
+                            % (
+                                getter.pvname,
+                                to_string(expected_value),
+                                to_string(measured_value),
+                            ),
+                        )
 
                     # check a table of values
                     elif isinstance(test_data.get_value, list):
@@ -373,9 +412,10 @@ def test_generator(test_data):
                                 # a single-element waveform
                                 measured_value = numpy.array([measured_value])
                             else:
-                                raise ValueError("Expected %s to be an array but got %s"
-                                                 % (getter.pvname, to_string(measured_value))
-                                                 )
+                                raise ValueError(
+                                    "Expected %s to be an array but got %s"
+                                    % (getter.pvname, to_string(measured_value))
+                                )
 
                         # pyepics expect single characters to be passed as integer
                         # convert string to int or float where possible
@@ -393,24 +433,27 @@ def test_generator(test_data):
                                 expected_value.append(v)
 
                         # add zero after the expected values
-                        expected_value += [0] * \
-                            (len(measured_value)-len(test_data.get_value))
+                        expected_value += [0] * (
+                            len(measured_value) - len(test_data.get_value)
+                        )
 
-                        self.assertTrue(len(expected_value) == len(measured_value),
-                                        "Expected %s to be %s elements long, and not %s: %s"
-                                        % (getter.pvname,
-                                           len(expected_value),
-                                           len(measured_value),
-                                           to_string(measured_value)
-                                           ))
+                        self.assertTrue(
+                            len(expected_value) == len(measured_value),
+                            "Expected %s to be %s elements long, and not %s: %s"
+                            % (
+                                getter.pvname,
+                                len(expected_value),
+                                len(measured_value),
+                                to_string(measured_value),
+                            ),
+                        )
 
                         # recover margin and delta
                         margin_delta_str = ""
                         rtol = None
                         atol = None
                         if test_data.margin is not None:
-                            margin_delta_str += " ±%.3G%%" % (
-                                test_data.margin*100)
+                            margin_delta_str += " ±%.3G%%" % (test_data.margin * 100)
                             rtol = test_data.margin
                         if test_data.margin is not None and test_data.delta is not None:
                             margin_delta_str += " or"
@@ -422,43 +465,55 @@ def test_generator(test_data):
                         isclose = numpy.equal(measured_value, expected_value)
                         if rtol is not None:
                             isclose_marging = numpy.isclose(
-                                measured_value, expected_value, rtol=rtol, atol=0)
-                            isclose = numpy.logical_or(
-                                isclose, isclose_marging)
+                                measured_value, expected_value, rtol=rtol, atol=0
+                            )
+                            isclose = numpy.logical_or(isclose, isclose_marging)
                         if atol is not None:
                             isclose_delta = numpy.isclose(
-                                measured_value, expected_value, rtol=0, atol=atol)
+                                measured_value, expected_value, rtol=0, atol=atol
+                            )
                             isclose = numpy.logical_or(isclose, isclose_delta)
 
                         # show "OK" if close otherwise show difference
                         all_close = numpy.all(isclose)
                         if not all_close:  # compute diff only if not OK
                             diff = numpy.abs(measured_value - expected_value)
-                            diff[isclose == True] = 0
+                            diff[isclose is True] = 0
                             diff_str = ["OK" if x == 0 else x for x in diff]
 
-                            self.assertTrue(all_close,
-                                            "Expected %s to be %s%s,\nbut got %s,\ndifference is %s"
-                                            % (getter.pvname,
-                                               to_string(expected_value),
-                                                margin_delta_str,
-                                                to_string(measured_value),
-                                                to_string(diff_str)
-                                               ))
+                            self.assertTrue(
+                                all_close,
+                                "Expected %s to be %s%s,\nbut got %s,\ndifference is %s"
+                                % (
+                                    getter.pvname,
+                                    to_string(expected_value),
+                                    margin_delta_str,
+                                    to_string(measured_value),
+                                    to_string(diff_str),
+                                ),
+                            )
 
                     # check a number or boolean without margin or delta
                     elif not test_data.margin and not test_data.delta:
                         expected_value = test_data.get_value
                         measured_value = getter.get()
-                        self.assertEqual(expected_value, measured_value,
-                                         "Expected %s to be %s, but got %s"
-                                         % (getter.pvname, to_string(expected_value), to_string(measured_value)))
+                        self.assertEqual(
+                            expected_value,
+                            measured_value,
+                            "Expected %s to be %s, but got %s"
+                            % (
+                                getter.pvname,
+                                to_string(expected_value),
+                                to_string(measured_value),
+                            ),
+                        )
 
                     # check a number or boolean with margin or delta
                     else:
                         if test_data.margin is not None:
-                            margin = abs(float(test_data.get_value)
-                                         * float(test_data.margin))
+                            margin = abs(
+                                float(test_data.get_value) * float(test_data.margin)
+                            )
                         else:
                             margin = 0
                         if test_data.delta is not None:
@@ -468,80 +523,129 @@ def test_generator(test_data):
 
                         if margin > delta:
                             max_delta = margin
-                            margin_delta_str = "±%.3G%%" % (
-                                test_data.margin*100)
+                            margin_delta_str = "±%.3G%%" % (test_data.margin * 100)
                         else:
                             max_delta = delta
                             margin_delta_str = "±%.3G" % delta
 
-                        expected_value = float("NaN") if test_data.get_value is None else float(
-                            test_data.get_value)
-                        measured_value = float("NaN") if getter.get(
-                        ) is None else float(getter.get())
+                        expected_value = (
+                            float("NaN")
+                            if test_data.get_value is None
+                            else float(test_data.get_value)
+                        )
+                        measured_value = (
+                            float("NaN")
+                            if getter.get() is None
+                            else float(getter.get())
+                        )
 
-                        self.assertAlmostEqual(test_data.get_value, measured_value, delta=max_delta,
-                                               msg="Expected %s to be %.3G %s (ie. within [%.3G,%.3G]), but got %.3G"
-                                               % (getter.pvname,
-                                                  expected_value,
-                                                  margin_delta_str,
-                                                  expected_value-max_delta,
-                                                  expected_value+max_delta,
-                                                  measured_value))
+                        self.assertAlmostEqual(
+                            test_data.get_value,
+                            measured_value,
+                            delta=max_delta,
+                            msg="Expected %s to be %.3G %s (ie. within [%.3G,%.3G]), but got %.3G"
+                            % (
+                                getter.pvname,
+                                expected_value,
+                                margin_delta_str,
+                                expected_value - max_delta,
+                                expected_value + max_delta,
+                                measured_value,
+                            ),
+                        )
 
                 getter_error = False
-                test_data.elapsed = time.time()-start_time
+                test_data.elapsed = time.time() - start_time
                 test_data.exception = None
                 tr_logger.log(
-                    LVL_TEST_SUCCESS, "Success of %s    (in %.3fs) ", test_data.id, test_data.elapsed)
+                    LVL_TEST_SUCCESS,
+                    "Success of %s    (in %.3fs) ",
+                    test_data.id,
+                    test_data.elapsed,
+                )
 
                 # Logging data using ENeXAr
-                if test_data.pvlogger != None:
+                if test_data.pvlogger is not None:
                     try:
                         for pv in test_data.pvlogger:
                             enexar = PVConnection.get_pv_connection(
-                                pv['server']+'LOGNWAIT', 'PVA')
+                                pv["server"] + "LOGNWAIT", "PVA"
+                            )
                             rpc_value = pv.copy()
-                            rpc_value.pop('server')
-                            if 'acquisitions' in rpc_value:
-                                rpc_value['n_acq'] = str(
-                                    rpc_value.pop('acquisitions'))
-                            if not rpc_value['path'].endswith('.h5') and not rpc_value['path'].endswith('.hdf5'):
-                                rpc_value['path'] = rpc_value['path']+'.h5'
+                            rpc_value.pop("server")
+                            if "acquisitions" in rpc_value:
+                                rpc_value["n_acq"] = str(rpc_value.pop("acquisitions"))
+                            if not rpc_value["path"].endswith(".h5") and not rpc_value[
+                                "path"
+                            ].endswith(".hdf5"):
+                                rpc_value["path"] = rpc_value["path"] + ".h5"
                             status = enexar.rpc(rpc_value)
-                            if status != True:
+                            if status is False:
                                 logger.error(
-                                    'An error ocurred while trying to log PV {0} to ENeXAr. Probably the file already exists and has been closed.'.format(rpc_value['pv']))
-                    except:
-                        logger.error('Could not connect to the ENeXAr server with prefix "{0}". Please check that it is available.'.format(pv['server']))
+                                    "An error ocurred while trying to log PV {0} to ENeXAr. Probably the file already exists and has been closed.".format(
+                                        rpc_value["pv"]
+                                    )
+                                )
+                    except Exception:
+                        logger.error(
+                            'Could not connect to the ENeXAr server with prefix "{0}". Please check that it is available.'.format(
+                                pv["server"]
+                            )
+                        )
 
                 break  # no exception then no need for retry
 
             # test fails
             except (AssertionError) as exception:
-                test_data.elapsed = time.time()-start_time
+                test_data.elapsed = time.time() - start_time
                 test_data.exception = exception
                 # loop again if they are retries left
                 if nb_exec <= test_data.retry:
-                    tr_logger.log(LVL_TEST_RUNNING, "Retry (%d/%s) %s    (in %.3fs) %s",
-                                  nb_exec, test_data.retry, test_data.id, test_data.elapsed, e)
+                    tr_logger.log(
+                        LVL_TEST_RUNNING,
+                        "Retry (%d/%s) %s    (in %.3fs) %s",
+                        nb_exec,
+                        test_data.retry,
+                        test_data.id,
+                        test_data.elapsed,
+                        exception,
+                    )
                     SelectableTestResult.queue_to_gui.put(
-                        [test_data.id, STATUS_RETRY, test_data.elapsed, test_data.exception])
+                        [
+                            test_data.id,
+                            STATUS_RETRY,
+                            test_data.elapsed,
+                            test_data.exception,
+                        ]
+                    )
 
                     continue
 
                 # otherwise mark as failed
-                tr_logger.log(LVL_TEST_FAILED, "Failure of %s    (in %.3fs) %s",
-                              test_data.id, test_data.elapsed, test_data.exception)
+                tr_logger.log(
+                    LVL_TEST_FAILED,
+                    "Failure of %s    (in %.3fs) %s",
+                    test_data.id,
+                    test_data.elapsed,
+                    test_data.exception,
+                )
                 tr_logger.log(LVL_RUN_CONTROL, "%s", on_failure)
 
                 raise
 
             # something is not right with this test (ignore retry)
             except (EmptyTest, InconsistantTest, Exception) as e:
-                test_data.elapsed = time.time()-start_time
+                test_data.elapsed = time.time() - start_time
                 test_data.exception = e
-                tr_logger.log(LVL_TEST_ERRORED, "Error   of %s    (in %.3fs) %s%s%s", test_data.id, test_data.elapsed,
-                              "[setter error] "*setter_error, "[getter error] "*getter_error, e)
+                tr_logger.log(
+                    LVL_TEST_ERRORED,
+                    "Error   of %s    (in %.3fs) %s%s%s",
+                    test_data.id,
+                    test_data.elapsed,
+                    "[setter error] " * setter_error,
+                    "[getter error] " * getter_error,
+                    e,
+                )
                 tr_logger.log(LVL_RUN_CONTROL, "%s", on_failure)
 
                 raise
@@ -594,21 +698,19 @@ class TestsGenerator(object):
             delay = test_raw_data.get("delay", self.get_config("delay"))
             ignore = test_raw_data.get("ignore", self.get_config("ignore"))
             skip = test_raw_data.get("skip", self.get_config("skip"))
-            on_failure = test_raw_data.get(
-                'on_failure', self.get_config("on_failure"))
-            retry = test_raw_data.get('retry', self.get_config("retry"))
-            protocol = test_raw_data.get(
-                'protocol', self.get_config("protocol"))
+            on_failure = test_raw_data.get("on_failure", self.get_config("on_failure"))
+            retry = test_raw_data.get("retry", self.get_config("retry"))
+            protocol = test_raw_data.get("protocol", self.get_config("protocol"))
 
             if "logger" in test_raw_data:
-                pvlogger = test_raw_data['logger']
+                pvlogger = test_raw_data["logger"]
             else:
                 pvlogger = None
 
             # generate subtests
             subtests_list = []
             if ignore:
-                logger.info("Ignore %s ", test_raw_data['name'])
+                logger.info("Ignore %s ", test_raw_data["name"])
                 # If ignore is True then test should not be read,
                 # but index taken into account nonetheless
                 # hence adding it in the test list as empty
@@ -631,8 +733,7 @@ class TestsGenerator(object):
                 step = abs(test_raw_data["range"].get("step", 0))
                 lin = abs(test_raw_data["range"].get("lin", 0))
                 geom = abs(test_raw_data["range"].get("geom", 0))
-                include_start = test_raw_data["range"].get(
-                    "include_start", True)
+                include_start = test_raw_data["range"].get("include_start", True)
                 include_stop = test_raw_data["range"].get("include_stop", True)
                 sort = str(test_raw_data["range"].get("sort", True))
 
@@ -652,11 +753,13 @@ class TestsGenerator(object):
                 if step != 0:
                     value_list.update(numpy.arange(start, stop, step))
                 if lin != 0:
-                    value_list.update(numpy.linspace(
-                        start, stop, lin, endpoint=include_stop))
+                    value_list.update(
+                        numpy.linspace(start, stop, lin, endpoint=include_stop)
+                    )
                 if geom != 0:
-                    value_list.update(numpy.geomspace(
-                        start, stop, geom, endpoint=include_stop))
+                    value_list.update(
+                        numpy.geomspace(start, stop, geom, endpoint=include_stop)
+                    )
 
                 # check if stop value should be tested or not
                 if include_stop and stop not in value_list:
@@ -679,8 +782,7 @@ class TestsGenerator(object):
                 elif sort.lower() in ["false", "random"]:
                     random.shuffle(ordered_values)
                 else:
-                    logging.error(
-                        "Unexpected value for `sort` field: %s", sort)
+                    logging.error("Unexpected value for `sort` field: %s", sort)
 
                 for value in ordered_values:
                     # use value only if setter or getter
@@ -695,11 +797,11 @@ class TestsGenerator(object):
                     else:
                         subtest_title = "no setter nor getter"
 
-                    logger.debug('adding new range subtest')
+                    logger.debug("adding new range subtest")
                     test_data = TestData(
                         on_failure=on_failure,
                         retry=retry,
-                        test_title=test_raw_data['name'],
+                        test_title=test_raw_data["name"],
                         subtest_title=subtest_title,
                         skip=skip,
                         getter=getter,
@@ -710,7 +812,7 @@ class TestsGenerator(object):
                         delay=delay,
                         margin=get_margin(test_raw_data),
                         delta=get_delta(test_raw_data),
-                        test_message=test_raw_data.get('message', None),
+                        test_message=test_raw_data.get("message", None),
                         protocol=protocol,
                         pvlogger=pvlogger,
                     )
@@ -741,11 +843,11 @@ class TestsGenerator(object):
                     else:
                         subtest_title = "no setter nor getter"
 
-                    logger.debug('adding new value subtest')
+                    logger.debug("adding new value subtest")
                     test_data = TestData(
                         on_failure=on_failure,
                         retry=retry,
-                        test_title=test_raw_data['name'],
+                        test_title=test_raw_data["name"],
                         subtest_title=subtest_title,
                         skip=skip,
                         getter=getter,
@@ -756,7 +858,7 @@ class TestsGenerator(object):
                         delay=delay,
                         margin=get_margin(test_raw_data),
                         delta=get_delta(test_raw_data),
-                        test_message=test_raw_data.get('message', None),
+                        test_message=test_raw_data.get("message", None),
                         protocol=protocol,
                         pvlogger=pvlogger,
                     )
@@ -789,37 +891,32 @@ class TestsGenerator(object):
 
                     # Setter is optional, and so is set_value
                     if setter is not None:
-                        set_value = command.get(
-                            "value", command.get("set_value"))
+                        set_value = command.get("value", command.get("set_value"))
 
                     # Getter is optional, and so is get_value
                     if getter is not None:
-                        get_value = command.get(
-                            "value", command.get("get_value"))
+                        get_value = command.get("value", command.get("get_value"))
 
-                    delay = command.get("delay",
-                                        test_raw_data.get(
-                                            "delay", self.get_config("delay"))
-                                        )
-                    skip = command.get("skip",
-                                       test_raw_data.get(
-                                           "skip", self.get_config("skip"))
-                                       )
-                    on_failure = command.get("on_failure",
-                                             test_raw_data.get(
-                                                 "on_failure", self.get_config("on_failure"))
-                                             )
-                    retry = command.get("retry",
-                                        test_raw_data.get(
-                                            "retry", self.get_config("retry"))
-                                        )
+                    delay = command.get(
+                        "delay", test_raw_data.get("delay", self.get_config("delay"))
+                    )
+                    skip = command.get(
+                        "skip", test_raw_data.get("skip", self.get_config("skip"))
+                    )
+                    on_failure = command.get(
+                        "on_failure",
+                        test_raw_data.get("on_failure", self.get_config("on_failure")),
+                    )
+                    retry = command.get(
+                        "retry", test_raw_data.get("retry", self.get_config("retry"))
+                    )
 
-                    logger.debug('adding new command subtest')
+                    logger.debug("adding new command subtest")
                     test_data = TestData(
                         on_failure=on_failure,
                         retry=retry,
-                        test_title=test_raw_data['name'],
-                        subtest_title=command['name'],
+                        test_title=test_raw_data["name"],
+                        subtest_title=command["name"],
                         skip=skip,
                         getter=getter,
                         setter=setter,
@@ -829,8 +926,8 @@ class TestsGenerator(object):
                         delay=delay,
                         margin=get_margin(command),
                         delta=get_delta(command),
-                        test_message=test_raw_data.get('message', None),
-                        subtest_message=command.get('message', None),
+                        test_message=test_raw_data.get("message", None),
+                        subtest_message=command.get("message", None),
                         protocol=protocol,
                         pvlogger=pvlogger,
                     )
@@ -843,15 +940,16 @@ class TestsGenerator(object):
                 else:  # show an error "NO_KIND"
                     test_data = TestData(
                         on_failure=on_failure,
-                        test_title=test_raw_data['name'],
+                        test_title=test_raw_data["name"],
                         subtest_title=NO_KIND,
                         skip=skip,
-                        protocol=protocol,)
+                        protocol=protocol,
+                    )
 
                     subtests_list.append(test_data)
 
             if "finally" in test_raw_data and not ignore:
-                logger.debug('Found finally statement in %s', test_raw_data)
+                logger.debug("Found finally statement in %s", test_raw_data)
                 if subtests_list is None:
                     # for instance no subtest
                     subtests_list = []
@@ -870,12 +968,12 @@ class TestsGenerator(object):
                 else:
                     raise InvalidTest("Undefined value in finally block")
 
-                logger.debug('adding new finally subtest')
+                logger.debug("adding new finally subtest")
                 finally_data = TestData(
                     on_failure=on_failure,
-                    retry=test_raw_data.get('retry', self.get_config("retry")),
-                    test_title=test_raw_data['name'],
-                    subtest_title='Final statement',
+                    retry=test_raw_data.get("retry", self.get_config("retry")),
+                    test_title=test_raw_data["name"],
+                    subtest_title="Final statement",
                     skip=skip,
                     setter=command,
                     set_value=value,
@@ -944,7 +1042,7 @@ class TestsGenerator(object):
                 test_id = self.get_test_id(
                     scenario=scenario_index,
                     test=idx,
-                    subtest=self.tests_list[idx].index(test_data)
+                    subtest=self.tests_list[idx].index(test_data),
                 )
                 test_data.id = test_id
 
@@ -952,8 +1050,12 @@ class TestsGenerator(object):
                 test_func, test_data = test_generator(test_data)
                 skip = test_data.skip
 
-                logger.debug('Add test named "%s", with description "%s": %s',
-                             test_id, test_data.desc, test_func)
+                logger.debug(
+                    'Add test named "%s", with description "%s": %s',
+                    test_id,
+                    test_data.desc,
+                    test_func,
+                )
 
                 # test_case = SelectableTestCase(test_data, test_func)
                 Test_case.add_test(test_data, test_func)
@@ -961,6 +1063,7 @@ class TestsGenerator(object):
                 # add test case to test suite
                 if skip:
                     tests_suite.add_skipped_test(
-                        Test_case, test_id, "Test skipped from file.")
+                        Test_case, test_id, "Test skipped from file."
+                    )
                 else:
                     tests_suite.add_selected_test(Test_case, test_id)

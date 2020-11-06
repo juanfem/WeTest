@@ -22,6 +22,7 @@ import logging
 from builtins import object
 from builtins import str
 from future import standard_library
+
 standard_library.install_aliases()
 
 
@@ -67,7 +68,7 @@ class PVData(object):
             output += " -- tested as setter (%s)" % len(self.setter_subtests)
         if len(self.getter_subtests) > 0:
             output += " -- tested as getter (%s)" % len(self.getter_subtests)
-        output += "\n"+len(output)*"-"
+        output += "\n" + len(output) * "-"
 
         sc_id = -1
         for test_id in sorted(self.tests_titles, key=test_id_sort):
@@ -92,12 +93,12 @@ class PVConnection(object):
 
     @classmethod
     def get_pv_connection(cls, name, protocol, connection_callback=None):
-        if protocol.upper() == 'CA':
+        if protocol.upper() == "CA":
             return cls.CaConnection(name, connection_callback)
-        elif protocol.upper() == 'PVA':
+        elif protocol.upper() == "PVA":
             return cls.PvaConnection(name, connection_callback)
 
-    class CaConnection():
+    class CaConnection:
         def __init__(self, name, connection_callback):
             self.pvname = name
             self.pv = epics.PV(name, connection_callback=connection_callback)
@@ -115,17 +116,16 @@ class PVConnection(object):
         def get(self, **kwargs):
             return self.pv.get(**kwargs)
 
-    class PvaConnection():
-        ctxt = Context('pva')
+    class PvaConnection:
+        ctxt = Context("pva")
 
         def __init__(self, name, connection_callback):
             self.pvname = name
             self.connection_callback = connection_callback
             self.connected = False
 
-            if self.connection_callback != None:
-                self.monitor = self.ctxt.monitor(
-                    name, self.connection_callback_wrapper)
+            if self.connection_callback is not None:
+                self.monitor = self.ctxt.monitor(name, self.connection_callback_wrapper)
 
         def check_connection(self):
             self.monitor.close()
@@ -154,10 +154,9 @@ class PVConnection(object):
             anames = []
             for key in data:
                 if type(data[key]) == dict:
-                    anames.append(
-                        (key, ('S', None, self._build_type(data[key]))))
+                    anames.append((key, ("S", None, self._build_type(data[key]))))
                 else:
-                    anames.append((key, 's'))
+                    anames.append((key, "s"))
             return anames
 
 
@@ -170,18 +169,28 @@ class PVInfo(object):
     connected:          whether last check showed PV as connected
     """
 
-    def __init__(self, name, protocol='PVA', setter_subtests=None, getter_subtests=None, connection_callback=None):
+    def __init__(
+        self,
+        name,
+        protocol="PVA",
+        setter_subtests=None,
+        getter_subtests=None,
+        connection_callback=None,
+    ):
 
         self.data = PVData(name)
 
-        if connection_callback != None:
+        if connection_callback is not None:
             self.pv_connection = PVConnection.get_pv_connection(
-                self.data.name, protocol, connection_callback)
+                self.data.name, protocol, connection_callback
+            )
 
-        setter_subtests = set(
-            [setter_subtests]) if setter_subtests is not None else set()
-        getter_subtests = set(
-            [getter_subtests]) if getter_subtests is not None else set()
+        setter_subtests = (
+            set([setter_subtests]) if setter_subtests is not None else set()
+        )
+        getter_subtests = (
+            set([getter_subtests]) if getter_subtests is not None else set()
+        )
         for subtest in setter_subtests | getter_subtests:
             self.add_subtest(subtest)
 
@@ -261,7 +270,9 @@ class PVInfo(object):
 
         if len(obsolete) >= 0:
             self.data.tests_titles = {
-                k: v for k, v in list(self.data.tests_titles.items()) if k not in obsolete
+                k: v
+                for k, v in list(self.data.tests_titles.items())
+                if k not in obsolete
             }
 
     def __str__(self):
@@ -289,16 +300,22 @@ def pvs_from_suite(suite, ref_dict=None, connection_callback=None):
                 pvs_refs[test_data.setter].add_subtest(test_data)
             else:
                 pvs_refs[test_data.setter] = PVInfo(
-                    test_data.setter, test_data.protocol, setter_subtests=test_data,
-                    connection_callback=connection_callback)
+                    test_data.setter,
+                    test_data.protocol,
+                    setter_subtests=test_data,
+                    connection_callback=connection_callback,
+                )
 
         if test_data.getter is not None:
             if test_data.getter in pvs_refs:
                 pvs_refs[test_data.getter].add_subtest(test_data)
             else:
                 pvs_refs[test_data.getter] = PVInfo(
-                    test_data.getter, test_data.protocol, getter_subtests=test_data,
-                    connection_callback=connection_callback)
+                    test_data.getter,
+                    test_data.protocol,
+                    getter_subtests=test_data,
+                    connection_callback=connection_callback,
+                )
     return pvs_refs
 
 
@@ -309,6 +326,7 @@ class PVsTable(object):
     def __init__(self, queue=None):
         if queue is None:
             import queue
+
             self.queue = queue.Queue()
         else:
             self.queue = queue
@@ -317,18 +335,18 @@ class PVsTable(object):
     def register_pvs(self, suite=None, pv_list=None):
         """Check connection of all the PVs declared in suite"""
         if suite is None and pv_list is None:
-            raise NotImplementedError(
-                "Expecting pv_list or suite to be provided")
+            raise NotImplementedError("Expecting pv_list or suite to be provided")
         # collect all the PVs and initialize the callback
         for pv_name in set(pv_list if pv_list is not None else []):
             self.pvs_refs[pv_name] = PVInfo(
-                pv_name, connection_callback=self.connection_callback)
+                pv_name, connection_callback=self.connection_callback
+            )
 
         if suite is not None:
             pvs_from_suite(
                 suite,
                 ref_dict=self.pvs_refs,
-                connection_callback=self.connection_callback
+                connection_callback=self.connection_callback,
             )
 
         all_connected = True
@@ -340,8 +358,7 @@ class PVsTable(object):
             # make sure that unreachable PV are displayed in stdout at least once
             if not pv.check_connection():
                 all_connected = False
-                logger.log(LVL_PV_DISCONNECTED,
-                           "PV is unreachable: %s" % pv.name)
+                logger.log(LVL_PV_DISCONNECTED, "PV is unreachable: %s" % pv.name)
                 self.queue.put(pv.data)
 
         return all_connected, self.pvs_refs
@@ -349,11 +366,9 @@ class PVsTable(object):
     def connection_callback(self, pvname=None, conn=None, **kws):
         """Updates PV status in pvs_refs and put data in queue"""
         if not conn:
-            logger.log(LVL_PV_DISCONNECTED,
-                       "PV changed to unreachable: %s" % pvname)
+            logger.log(LVL_PV_DISCONNECTED, "PV changed to unreachable: %s" % pvname)
         else:
-            logger.log(LVL_PV_CONNECTED,
-                       "PV changed to connected: %s" % pvname)
+            logger.log(LVL_PV_CONNECTED, "PV changed to connected: %s" % pvname)
 
         try:
             pv = self.pvs_refs[pvname]
@@ -361,4 +376,7 @@ class PVsTable(object):
             self.queue.put(pv.data)
         except KeyError:
             logger.critical(
-                "connection_callback called on %s which is not referenced in PVsTable %s yet", pvname, self)
+                "connection_callback called on %s which is not referenced in PVsTable %s yet",
+                pvname,
+                self,
+            )

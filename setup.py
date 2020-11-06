@@ -20,7 +20,7 @@ except ImportError:  # for pip <= 9.0.3
 # Solution comming from:
 # https://stackoverflow.com/questions/14399534/reference-requirements-txt-for-the-install-requires-kwarg-in-setuptools-setup-py
 # TODO: Find a better way to handle this (can stop working at any moment)
-install_reqs = parse_requirements('requirements.txt', session='hack')
+install_reqs = parse_requirements("requirements.txt", session="hack")
 try:  # for pip >= 10
     reqs = [str(ir.requirement) for ir in install_reqs]
 except AttributeError:  # for pip <= 9.0.3
@@ -28,25 +28,25 @@ except AttributeError:  # for pip <= 9.0.3
 
 
 def readme():
-    with open('README.md') as f:
+    with open("README.md") as f:
         return f.read()
 
 
-setup(name='wetest',
-      version='2.0.0',
-      description='WeTest allows you to test EPICS modules',
-      long_description=readme(),
-      classifiers=[
-          'Development Status :: 3 - Alpha',
-          'Programming Language :: Python :: 2.7',
-      ],
-      keywords='epics testing',
-      packages=find_packages(),
-      package_data={
-          'wetest': ['resources/*', 'resources/icons/*', 'resources/logo/*']
-      },
-      install_requires=reqs,
-      entry_points={
-          'console_scripts': ['wetest=wetest.command_line:main'],
-      },
-      zip_safe=False)
+setup(
+    name="wetest",
+    version="2.0.0",
+    description="WeTest allows you to test EPICS modules",
+    long_description=readme(),
+    classifiers=[
+        "Development Status :: 3 - Alpha",
+        "Programming Language :: Python :: 2.7",
+    ],
+    keywords="epics testing",
+    packages=find_packages(),
+    package_data={"wetest": ["resources/*", "resources/icons/*", "resources/logo/*"]},
+    install_requires=reqs,
+    entry_points={
+        "console_scripts": ["wetest=wetest.command_line:main"],
+    },
+    zip_safe=False,
+)

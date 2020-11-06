@@ -1,9 +1,6 @@
-import time
 import threading
 import unittest
-import os
 import logging
-import re
 from queue import Queue
 
 from wetest.testing.selectable_tests import SelectableTestResult
@@ -12,14 +9,20 @@ from wetest.report.generator import ReportGenerator
 from wetest.common.constants import LVL_RUN_CONTROL
 
 from wetest.common.constants import (
-    SELECTION_FROM_GUI, START_FROM_GUI, RESUME_FROM_GUI, PAUSE_FROM_GUI, ABORT_FROM_GUI,
-    END_OF_GUI, CONTINUE_FROM_TEST, PAUSE_FROM_TEST, ABORT_FROM_TEST, END_OF_TESTS,
-    REPORT_GENERATED, PAUSE_FROM_MANAGER, ABORT_FROM_MANAGER, PLAY_FROM_MANAGER
-)
-
-from wetest.gui.specific import (
-    STATUS_UNKNOWN, STATUS_RUN, STATUS_RETRY, STATUS_SKIP,
-    STATUS_ERROR, STATUS_FAIL, STATUS_SUCCESS
+    SELECTION_FROM_GUI,
+    START_FROM_GUI,
+    RESUME_FROM_GUI,
+    PAUSE_FROM_GUI,
+    ABORT_FROM_GUI,
+    END_OF_GUI,
+    CONTINUE_FROM_TEST,
+    PAUSE_FROM_TEST,
+    ABORT_FROM_TEST,
+    END_OF_TESTS,
+    REPORT_GENERATED,
+    PAUSE_FROM_MANAGER,
+    ABORT_FROM_MANAGER,
+    PLAY_FROM_MANAGER,
 )
 
 
@@ -31,7 +34,6 @@ def quiet_exception(*args):
     exception_tuple = tuple(args[:])
 
     def decorator(func):
-
         def wrapper(*args, **kwargs):
             try:
                 func(*args, **kwargs)
@@ -96,7 +98,7 @@ class ProcessManager(object):
         # trace start request  (to unpause run process)
         self.evt_start = threading.Event()
         self.evt_stop = threading.Event()
-   
+
         # access to runner output
         self.runner_output = MultithreadedQueueStream()
         queue_handler = logging.StreamHandler(self.runner_output)
@@ -118,13 +120,15 @@ class ProcessManager(object):
     def start_runner_process(self):
         """start runner in another process (also needs to be CA compatible)"""
         self.p_run_and_report = threading.Thread(
-            target=self.run_and_report, name="run_and_report")
+            target=self.run_and_report, name="run_and_report"
+        )
         self.p_run_and_report.start()
 
     def start_gui_command_process(self):
         """sstart gui_commands in another process"""
         self.p_gui_commands = threading.Thread(
-            target=self.gui_commands, name="gui_commands")
+            target=self.gui_commands, name="gui_commands"
+        )
         self.p_gui_commands.start()
 
     def run(self):
@@ -179,7 +183,8 @@ class ProcessManager(object):
             logger.info("Running tests suite...")
 
             self.runner = unittest.TextTestRunner(
-                resultclass=SelectableTestResult, verbosity=0)  # use verbosity for debug
+                resultclass=SelectableTestResult, verbosity=0
+            )  # use verbosity for debug
 
             # check that there are tests to run
             logger.info("Nbr tests: %d", self.suite.countTestCases())
@@ -201,9 +206,10 @@ class ProcessManager(object):
 
         # Generate PDF
         if self.results and self.pdf_output is not None:
-            logger.info('Will export result in PDF file: %s', self.pdf_output)
-            export_pdf(self.pdf_output, self.suite,
-                       self.results, self.configs, self.naming)
+            logger.info("Will export result in PDF file: %s", self.pdf_output)
+            export_pdf(
+                self.pdf_output, self.suite, self.results, self.configs, self.naming
+            )
             logger.warning("Done generating report: %s", self.pdf_output)
             self.queue_to_gui.put(REPORT_GENERATED + " " + self.pdf_output)
         else:
@@ -215,13 +221,17 @@ class ProcessManager(object):
         self.queue_to_gui.put(PAUSE_FROM_MANAGER)
         self.queue_to_runner.put(PAUSE_FROM_MANAGER)
         if self.no_gui:
-            logger.warning("Pausing execution."
-                           + "\n  - To continue press Ctrl+Z and enter `fg`."
-                           + "\n  - To abort press Ctrl+C twice.")
+            logger.warning(
+                "Pausing execution."
+                + "\n  - To continue press Ctrl+Z and enter `fg`."
+                + "\n  - To abort press Ctrl+C twice."
+            )
         else:
-            logger.warning("Pausing execution."
-                           + "\n  - To continue, use GUI play button, or press Ctrl+Z and enter `fg`."
-                           + "\n  - To abort, use GUI abort button, or press Ctrl+C twice.")
+            logger.warning(
+                "Pausing execution."
+                + "\n  - To continue, use GUI play button, or press Ctrl+Z and enter `fg`."
+                + "\n  - To abort, use GUI abort button, or press Ctrl+C twice."
+            )
         # os.kill(self.pid_run_and_report, signal.SIGSTOP)
         logger.debug("Paused run_and_report")
 
@@ -255,8 +265,7 @@ class ProcessManager(object):
 
             if str(cmd).startswith(SELECTION_FROM_GUI):
                 # use an imutable type to ensure namespace update
-                self.selection = tuple(
-                    cmd[len(SELECTION_FROM_GUI)+1:].split(" "))
+                self.selection = tuple(cmd[len(SELECTION_FROM_GUI) + 1 :].split(" "))
                 # logger.debug("gui commands selected tests: %s", self.ns.selection)
                 self.selection_from_GUI.set()
 

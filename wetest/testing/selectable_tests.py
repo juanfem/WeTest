@@ -1,20 +1,31 @@
 import unittest
 
-from wetest.testing.reader import ABORT, PAUSE, CONTINUE
+from wetest.testing.reader import ABORT, PAUSE
 
 from wetest.gui.specific import (
-    STATUS_UNKNOWN, STATUS_RUN, STATUS_RETRY, STATUS_SKIP,
-    STATUS_ERROR, STATUS_FAIL, STATUS_SUCCESS
+    STATUS_UNKNOWN,
+    STATUS_RUN,
+    STATUS_SKIP,
+    STATUS_ERROR,
+    STATUS_FAIL,
+    STATUS_SUCCESS,
 )
 
-from wetest.common.constants import CONTINUE_FROM_TEST, PAUSE_FROM_TEST, ABORT_FROM_TEST
-from wetest.common.constants import PLAY_FROM_MANAGER, PAUSE_FROM_MANAGER, ABORT_FROM_MANAGER
+from wetest.common.constants import PAUSE_FROM_TEST, ABORT_FROM_TEST
+from wetest.common.constants import (
+    PLAY_FROM_MANAGER,
+    PAUSE_FROM_MANAGER,
+    ABORT_FROM_MANAGER,
+)
+
+from wetest.testing.generator import skipped_test_factory
 
 
 class SelectableTestResult(unittest.TextTestResult):
-    '''
-    Extending TextTestResults to send 
-    '''
+    """
+    Extending TextTestResults to send
+    """
+
     queue_to_gui = None
     queue_to_runner = None
     queue_to_pm = None
@@ -22,41 +33,77 @@ class SelectableTestResult(unittest.TextTestResult):
     def addSuccess(self, test):
         self.queue_to_gui.put([test._testMethodName, STATUS_RUN, None, None])
         super(SelectableTestResult, self).addSuccess(test)
-        self.queue_to_gui.put([test._testMethodName, STATUS_SUCCESS,
-                               test.test_data[test._testMethodName].elapsed, test.test_data[test._testMethodName].exception])
+        self.queue_to_gui.put(
+            [
+                test._testMethodName,
+                STATUS_SUCCESS,
+                test.test_data[test._testMethodName].elapsed,
+                test.test_data[test._testMethodName].exception,
+            ]
+        )
 
     def addError(self, test, err):
         self.queue_to_gui.put([test._testMethodName, STATUS_RUN, None, None])
         super(SelectableTestResult, self).addError(test, err)
-        self.queue_to_gui.put([test._testMethodName, STATUS_ERROR,
-                               test.test_data[test._testMethodName].elapsed, test.test_data[test._testMethodName].exception])
+        self.queue_to_gui.put(
+            [
+                test._testMethodName,
+                STATUS_ERROR,
+                test.test_data[test._testMethodName].elapsed,
+                test.test_data[test._testMethodName].exception,
+            ]
+        )
         self.handler_errors(test)
 
     def addFailure(self, test, err):
         self.queue_to_gui.put([test._testMethodName, STATUS_RUN, None, None])
         super(SelectableTestResult, self).addFailure(test, err)
-        self.queue_to_gui.put([test._testMethodName, STATUS_FAIL,
-                               test.test_data[test._testMethodName].elapsed, test.test_data[test._testMethodName].exception])
+        self.queue_to_gui.put(
+            [
+                test._testMethodName,
+                STATUS_FAIL,
+                test.test_data[test._testMethodName].elapsed,
+                test.test_data[test._testMethodName].exception,
+            ]
+        )
         self.handler_errors(test)
 
     def addSkip(self, test, reason):
         self.queue_to_gui.put([test._testMethodName, STATUS_RUN, None, None])
         super(SelectableTestResult, self).addSkip(test, reason)
-        self.queue_to_gui.put([test._testMethodName, STATUS_SKIP,
-                               test.test_data[test._testMethodName].elapsed, test.test_data[test._testMethodName].exception])
+        self.queue_to_gui.put(
+            [
+                test._testMethodName,
+                STATUS_SKIP,
+                test.test_data[test._testMethodName].elapsed,
+                test.test_data[test._testMethodName].exception,
+            ]
+        )
 
     def addExpectedFailure(self, test, err):
         self.queue_to_gui.put([test._testMethodName, STATUS_RUN, None, None])
         super(SelectableTestResult, self).addExpectedFailure(test, err)
-        self.queue_to_gui.put([test._testMethodName, STATUS_UNKNOWN,
-                               test.test_data[test._testMethodName].elapsed, test.test_data[test._testMethodName].exception])
+        self.queue_to_gui.put(
+            [
+                test._testMethodName,
+                STATUS_UNKNOWN,
+                test.test_data[test._testMethodName].elapsed,
+                test.test_data[test._testMethodName].exception,
+            ]
+        )
         self.handler_errors(test)
 
     def addUnexpectedSuccess(self, test):
         self.queue_to_gui.put([test._testMethodName, STATUS_RUN, None, None])
         super(SelectableTestResult, self).addUnexpectedSuccess(test)
-        self.queue_to_gui.put([test._testMethodName, STATUS_UNKNOWN,
-                               test.test_data[test._testMethodName].elapsed, test.test_data[test._testMethodName].exception])
+        self.queue_to_gui.put(
+            [
+                test._testMethodName,
+                STATUS_UNKNOWN,
+                test.test_data[test._testMethodName].elapsed,
+                test.test_data[test._testMethodName].exception,
+            ]
+        )
         self.handler_errors(test)
 
     def handler_errors(self, test):
@@ -94,8 +141,7 @@ class SelectableTestCase(unittest.TestCase):
     @classmethod
     def skip(cls, test_id, reason):
         """Skip the test method `test_id`"""
-        setattr(cls, test_id, skipped_test_factory(
-            cls.test_data[test_id], reason))
+        setattr(cls, test_id, skipped_test_factory(cls.test_data[test_id], reason))
 
     @classmethod
     def select(cls, test_id):

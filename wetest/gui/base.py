@@ -15,19 +15,18 @@
 """Generic classes used in gui.specific and gui.generator."""
 
 from __future__ import print_function
+from wetest.common.constants import VERBOSE_FORMATTER, FILE_HANDLER, WeTestError
+from PIL import ImageTk, Image
+import tkinter.ttk
+import tkinter as tk
+import logging
+from builtins import object
+from builtins import str
 
 from future import standard_library
+
 standard_library.install_aliases()
-from builtins import str
-from builtins import object
-import logging
-import tkinter as tk
-import tkinter.ttk
 
-from PIL import ImageTk, Image
-from pkg_resources import resource_filename
-
-from wetest.common.constants import VERBOSE_FORMATTER, FILE_HANDLER, WeTestError
 
 # configure logging
 logger = logging.getLogger(__name__)
@@ -44,6 +43,8 @@ BORDERWIDTH = 1
 INFO_WRAPLENGTH = 800
 
 # exception definition
+
+
 class ExistingTreeItem(WeTestError):
     """Item already exists in tree"""
 
@@ -60,7 +61,7 @@ class MyTreeview(tkinter.ttk.Treeview, object):
 
     def __init__(self, *args, **kwargs):
         tkinter.ttk.Treeview.__init__(self, *args, **kwargs)
-        self._parent_ref = {"":""}  # root parent is root
+        self._parent_ref = {"": ""}  # root parent is root
 
     def get_parent(self, item):
         """return the item parent id"""
@@ -130,7 +131,7 @@ class MyTreeview(tkinter.ttk.Treeview, object):
     def get_direct_children(self, item_id=""):
         """Returns the children of an item (including detached)"""
         direct_children = []
-        for child,parent in list(self._parent_ref.items()):
+        for child, parent in list(self._parent_ref.items()):
             if parent == item_id:
                 direct_children.append(child)
 
@@ -159,14 +160,14 @@ class MyTreeview(tkinter.ttk.Treeview, object):
         """Set open to True for each item of the list."""
         if item_list is None:
             item_list = self.get_all()
-        for item in item_list :
+        for item in item_list:
             self.item(item, open=True)
 
     def close_all(self, item_list=None):
         """Set open to False for each item of the list."""
         if item_list is None:
             item_list = self.get_all()
-        for item in item_list :
+        for item in item_list:
             self.item(item, open=False)
 
     def set_children(self, item, *newchildren):
@@ -184,7 +185,9 @@ class MyTreeview(tkinter.ttk.Treeview, object):
         except tk.TclError:
             pass
         else:
-            raise ExistingTreeItem("Item with iid %s already exists: %s"%(iid, iid_exists))
+            raise ExistingTreeItem(
+                "Item with iid %s already exists: %s" % (iid, iid_exists)
+            )
         item = super(MyTreeview, self).insert(parent, index, iid, **kw)
         self._parent_ref[item] = parent
         return item
@@ -201,7 +204,7 @@ class MyTreeview(tkinter.ttk.Treeview, object):
 
 class Tooltip(object):
     # https://stackoverflow.com/questions/3221956/how-do-i-display-tooltips-in-tkinter
-    '''
+    """
     It creates a tooltip for a given widget as the mouse goes on it.
 
     see:
@@ -229,14 +232,17 @@ class Tooltip(object):
       Tested on Ubuntu 16.04/16.10, running Python 3.5.2
 
     TODO: themes styles support
-    '''
+    """
 
-    def __init__(self, widget,
-                 bg='#FFFFEA',
-                 pad=(5, 3, 5, 3),
-                 text='widget info',
-                 waittime=400,
-                 wraplength=INFO_WRAPLENGTH):
+    def __init__(
+        self,
+        widget,
+        bg="#FFFFEA",
+        pad=(5, 3, 5, 3),
+        text="widget info",
+        waittime=400,
+        wraplength=INFO_WRAPLENGTH,
+    ):
 
         self.waittime = waittime  # in miliseconds, originally 500
         self.wraplength = wraplength  # in pixels, originally 180
@@ -271,15 +277,16 @@ class Tooltip(object):
         # if self.text == "":
         #     return
 
-        def tip_pos_calculator(widget, label,
-                               tip_delta=(10, 5), pad=(5, 3, 5, 3)):
+        def tip_pos_calculator(widget, label, tip_delta=(10, 5), pad=(5, 3, 5, 3)):
 
             w = widget
 
             s_width, s_height = w.winfo_screenwidth(), w.winfo_screenheight()
 
-            width, height = (pad[0] + label.winfo_reqwidth() + pad[2],
-                             pad[1] + label.winfo_reqheight() + pad[3])
+            width, height = (
+                pad[0] + label.winfo_reqwidth() + pad[2],
+                pad[1] + label.winfo_reqheight() + pad[3],
+            )
 
             mouse_x, mouse_y = w.winfo_pointerxy()
 
@@ -326,20 +333,18 @@ class Tooltip(object):
         # Leaves only the label and removes the app window
         self.tw.wm_overrideredirect(True)
 
-        win = tk.Frame(self.tw,
-                       background=bg,
-                       borderwidth=0)
-        label = tk.Label(win,
-                          text=self.text,
-                          justify=tk.LEFT,
-                          background=bg,
-                          relief=tk.SOLID,
-                          borderwidth=0,
-                          wraplength=self.wraplength)
+        win = tk.Frame(self.tw, background=bg, borderwidth=0)
+        label = tk.Label(
+            win,
+            text=self.text,
+            justify=tk.LEFT,
+            background=bg,
+            relief=tk.SOLID,
+            borderwidth=0,
+            wraplength=self.wraplength,
+        )
 
-        label.grid(padx=(pad[0], pad[2]),
-                   pady=(pad[1], pad[3]),
-                   sticky=tk.NSEW)
+        label.grid(padx=(pad[0], pad[2]), pady=(pad[1], pad[3]), sticky=tk.NSEW)
         win.grid()
 
         x, y = tip_pos_calculator(widget, label)
@@ -375,7 +380,7 @@ class Icon(tk.Label):
         # initialise dynamic parameters
         self.dynamic = dynamic  # boolean to run or not through the image list
         self.cur_img = 0  # index of the image to use
-        self._already_updating=False  # _update_dynamic-updating is already on
+        self._already_updating = False  # _update_dynamic-updating is already on
 
         # run a first update to initialize image
         # and launch automatic update if necessary
@@ -401,13 +406,13 @@ class Icon(tk.Label):
 
     def update(self):
         """Updates image and increase image index if dynamic."""
-        self.configure(image=self.images[self.cur_img%len(self.images)])
+        self.configure(image=self.images[self.cur_img % len(self.images)])
         if not self._already_updating:  # only update dynamic if not already on
             self._update_dynamic()
 
     def _update_dynamic(self):
         if self.dynamic:
-            self.cur_img = (self.cur_img + 1)%len(self.images)
+            self.cur_img = (self.cur_img + 1) % len(self.images)
             self.configure(image=self.images[self.cur_img])
             self._already_updating = True
             self.after(300, self._update_dynamic)
@@ -431,10 +436,10 @@ class ImageGif(object):
         self.attached = set()
 
         self._master = master
-        self._repeat = repeat     # number of repeatition requested
+        self._repeat = repeat  # number of repeatition requested
 
-        self._loc = 0             # frame index to display
-        self._count = 0           # current repeat number
+        self._loc = 0  # frame index to display
+        self._count = 0  # current repeat number
         self._is_running = False  # animation status
         self._callback_id = None  # keep after id, for after_cancel
 
@@ -444,7 +449,7 @@ class ImageGif(object):
         i = 0
         try:
             while True:
-                photoframe = ImageTk.PhotoImage(im.copy().convert('RGBA'))
+                photoframe = ImageTk.PhotoImage(im.copy().convert("RGBA"))
                 self._frames.append(photoframe)
                 i += 1
                 im.seek(i)
@@ -456,8 +461,8 @@ class ImageGif(object):
         # extract delay from file
         if delay is None:
             try:
-                self._delay = im.info['duration']
-            except:
+                self._delay = im.info["duration"]
+            except Exception:
                 self._delay = 100
         else:
             self._delay = delay
@@ -495,13 +500,14 @@ class ImageGif(object):
 
     def set_frame(self, frame):
         """Set a frame on all attached widgets."""
-        frame = max(abs(frame),self._last_index)
+        frame = max(abs(frame), self._last_index)
         self._loc = frame
         self.update_attached(image=self._frames[frame])
 
     def start_animation(self, frame=None):
         """Begin changing gif frames"""
-        if self._is_running: return
+        if self._is_running:
+            return
 
         if frame is not None:
             self.set_frame(frame)
@@ -511,7 +517,8 @@ class ImageGif(object):
 
     def stop_animation(self, frame=None):
         """Stop changing gif frames"""
-        if not self._is_running: return
+        if not self._is_running:
+            return
 
         if self._callback_id is not None:
             self._master.after_cancel(self._callback_id)
@@ -525,7 +532,7 @@ class ImageGif(object):
     def _animate_GIF(self, idx=None):
         """Callback function for update with after"""
 
-        self._loc = (self._loc + 1)%self._last_index
+        self._loc = (self._loc + 1) % self._last_index
         self.update_attached(image=self._frames[self._loc])
 
         if self._loc == 0:  # end the frame sequence
@@ -541,12 +548,14 @@ class ImageGif(object):
 
 
 class PopUpMenu(tk.Menu):
-    '''
+    """
     It creates a floating menu near the mouse when right-clicking a widget.
     http://effbot.org/zone/tkinter-popup-menu.htm
-    '''
+    """
 
-    def __init__(self, master, bound_widgets, bindings=["<Button-3>"], tearoff=0, **options):
+    def __init__(
+        self, master, bound_widgets, bindings=["<Button-3>"], tearoff=0, **options
+    ):
 
         tk.Menu.__init__(self, master=master, tearoff=tearoff, **options)
 
@@ -566,7 +575,7 @@ class PopUpMenu(tk.Menu):
 
         for widget in self.bound_widgets:
             for binding in self.bindings:
-               self.add_binding(widget, binding)
+                self.add_binding(widget, binding)
 
     def do_popup(self, event):
         # display the popup menu
@@ -590,7 +599,7 @@ def clip_generator(to_clip):
         r.withdraw()
         r.clipboard_clear()
         r.clipboard_append(str(to_clip))
-        r.update() # now it stays on the clipboard after the window is closed
+        r.update()  # now it stays on the clipboard after the window is closed
         r.destroy()
 
     return clip
@@ -599,7 +608,12 @@ def clip_generator(to_clip):
 if __name__ == "__main__":
     root = tk.Tk()
 
-    g = ImageGif(root, 'wetest/resources/icons/iconmonstr-loading-10-24.gif', start=False, delay=100)
+    g = ImageGif(
+        root,
+        "wetest/resources/icons/iconmonstr-loading-10-24.gif",
+        start=False,
+        delay=100,
+    )
 
     b = tk.Button(root, text="Test", compound="left")
     b.pack(side="left")
@@ -610,11 +624,8 @@ if __name__ == "__main__":
     tk.Button(root, text="Stop", command=g.stop_animation).pack()
     tk.Button(root, text="Frame", command=lambda: g.set_frame(3)).pack()
 
-    l = tk.Label()
-    l.pack()
-    g.attach(l)
+    label = tk.Label()
+    label.pack()
+    g.attach(label)
 
     root.mainloop()
-
-
-
