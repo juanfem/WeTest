@@ -566,10 +566,10 @@ def test_generator(test_data):
 
                 # Logging data using ENeXAr
                 if test_data.pvlogger is not None:
-                    try:
-                        for pv in test_data.pvlogger:
+                    for pv in test_data.pvlogger:
+                        try:
                             enexar = PVConnection.get_pv_connection(
-                                pv["server"] + "LOGNWAIT", "PVA"
+                                pv["server"] + "ACQUIRE_S", "PVA"
                             )
                             rpc_value = pv.copy()
                             rpc_value.pop("server")
@@ -582,16 +582,16 @@ def test_generator(test_data):
                             status = enexar.rpc(rpc_value)
                             if status is False:
                                 logger.error(
-                                    "An error ocurred while trying to log PV {0} to ENeXAr. Probably the file already exists and has been closed.".format(
-                                        rpc_value["pv"]
+                                    "An error ocurred while trying to log PV {0} to ENeXAr.\n{1}.".format(
+                                        rpc_value["pv"], status.alarm.message
                                     )
                                 )
-                    except Exception:
-                        logger.error(
-                            'Could not connect to the ENeXAr server with prefix "{0}". Please check that it is available.'.format(
-                                pv["server"]
+                        except Exception:
+                            logger.error(
+                                'Could not connect to the ENeXAr server with prefix "{0}". Please check that it is available.'.format(
+                                    pv["server"]
+                                )
                             )
-                        )
 
                 break  # no exception then no need for retry
 
