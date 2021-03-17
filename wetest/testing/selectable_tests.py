@@ -11,14 +11,25 @@ from wetest.gui.specific import (
     STATUS_SUCCESS,
 )
 
-from wetest.common.constants import PAUSE_FROM_TEST, ABORT_FROM_TEST
+from wetest.common.constants import PAUSE_FROM_TEST, ABORT_FROM_TEST, LVL_TEST_SKIPPED
 from wetest.common.constants import (
     PLAY_FROM_MANAGER,
     PAUSE_FROM_MANAGER,
     ABORT_FROM_MANAGER,
 )
+from wetest.common.constants import TERSE_FORMATTER, FILE_HANDLER
 
-from wetest.testing.generator import skipped_test_factory
+import logging
+
+
+# logger to share test results
+tr_logger = logging.getLogger("_wetest_tests_results")
+tr_logger.setLevel(logging.DEBUG)
+stream_handler = logging.StreamHandler()
+stream_handler.setFormatter(TERSE_FORMATTER)
+stream_handler.setLevel(logging.WARNING)
+tr_logger.addHandler(stream_handler)
+tr_logger.addHandler(FILE_HANDLER)
 
 
 class SelectableTestResult(unittest.TextTestResult):
@@ -203,3 +214,14 @@ class SelectableTestSuite(unittest.TestSuite):
         for test_id in selection:
             if test_id in already_skipped:
                 self.select(test_id)
+
+
+def skipped_test_factory(test_data, reason):
+    def skipped_test(self):
+        tr_logger.log(LVL_TEST_SKIPPED, "")
+        tr_logger.log(
+            LVL_TEST_SKIPPED, "Skipping   %s    %s", test_data.id, test_data.desc
+        )
+        raise unittest.SkipTest(reason)
+
+    return skipped_test

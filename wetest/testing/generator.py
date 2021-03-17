@@ -21,13 +21,12 @@ import logging
 import numpy
 import random
 import time
-import unittest
 
 from .selectable_tests import SelectableTestCase, SelectableTestResult
 
 from wetest.pvs.core import PVConnection
 from wetest.common.constants import CONTINUE_FROM_TEST, PAUSE_FROM_TEST, ABORT_FROM_TEST
-from wetest.common.constants import LVL_TEST_ERRORED, LVL_TEST_FAILED, LVL_TEST_SKIPPED
+from wetest.common.constants import LVL_TEST_ERRORED, LVL_TEST_FAILED
 from wetest.common.constants import LVL_TEST_SUCCESS, LVL_TEST_RUNNING, LVL_RUN_CONTROL
 from wetest.common.constants import VERBOSE_FORMATTER, TERSE_FORMATTER, FILE_HANDLER
 from wetest.common.constants import WeTestError, to_string
@@ -215,17 +214,6 @@ def add_doc(value):
         return func
 
     return _doc
-
-
-def skipped_test_factory(test_data, reason):
-    def skipped_test(self):
-        tr_logger.log(LVL_TEST_SKIPPED, "")
-        tr_logger.log(
-            LVL_TEST_SKIPPED, "Skipping   %s    %s", test_data.id, test_data.desc
-        )
-        raise unittest.SkipTest(reason)
-
-    return skipped_test
 
 
 # TODO: Move this method to TestData
