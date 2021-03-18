@@ -77,7 +77,7 @@ To install WeTest go inside the cloned repository folder and type:
 
 ```bash
 cd WeTest
-python setup.py install
+pip install .
 ```
 
 You can use `wetest` as a regular command line utility after that.
@@ -87,6 +87,8 @@ To deactivate the environment:
 ```bash
 conda deactivate
 ```
+
+Note that this package **cannot** be installed using `python setup.py install` if `epicscorelibs` is not already installed. Otherwise, it will install `epicscorelibs` as an egg file and `p4p` will fail to find the native libraries. 
 
 ### Setup pyepics
 
